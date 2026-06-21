@@ -44,7 +44,10 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
   }
 
   return (
-    <div className="h-14 border-b border-border flex items-center justify-between px-6 glass-panel select-none z-10">
+    <div 
+      className="h-14 border-b border-border flex items-center justify-between pl-6 pr-36 glass-panel select-none z-10" 
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+    >
       {/* Brand & Name */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
@@ -56,7 +59,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
           </span>
         </div>
         <div className="h-4 w-[1px] bg-border" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <input
             type="text"
             value={workflowNameInput}
@@ -68,7 +71,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
       </div>
 
       {/* Center File Operations */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button
           onClick={() => {
             clearCanvas()
@@ -108,7 +111,7 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
       </div>
 
       {/* Right Execution Operations */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         {isRunning ? (
           <button
             onClick={stopWorkflow}

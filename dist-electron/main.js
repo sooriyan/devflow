@@ -1,248 +1,172 @@
-import { BrowserWindow, app, ipcMain, safeStorage } from "electron";
-import path from "path";
-import fs from "fs/promises";
-import { existsSync, mkdirSync } from "fs";
-import { fileURLToPath } from "url";
-import { exec } from "child_process";
+import { BrowserWindow as e, app as t, ipcMain as n, safeStorage as r } from "electron";
+import i from "path";
+import a from "fs/promises";
+import { existsSync as o, mkdirSync as s } from "fs";
+import { fileURLToPath as c } from "url";
+import { exec as l } from "child_process";
 //#region \0rolldown/runtime.js
-var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+var u = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t.exports);
 //#endregion
 //#region node_modules/universal-user-agent/index.js
-function getUserAgent() {
-	if (typeof navigator === "object" && "userAgent" in navigator) return navigator.userAgent;
-	if (typeof process === "object" && process.version !== void 0) return `Node.js/${process.version.substr(1)} (${process.platform}; ${process.arch})`;
-	return "<environment undetectable>";
+function d() {
+	return typeof navigator == "object" && "userAgent" in navigator ? navigator.userAgent : typeof process == "object" && process.version !== void 0 ? `Node.js/${process.version.substr(1)} (${process.platform}; ${process.arch})` : "<environment undetectable>";
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/register.js
-function register(state, name, method, options) {
-	if (typeof method !== "function") throw new Error("method for before hook must be a function");
-	if (!options) options = {};
-	if (Array.isArray(name)) return name.reverse().reduce((callback, name) => {
-		return register.bind(null, state, name, callback, options);
-	}, method)();
-	return Promise.resolve().then(() => {
-		if (!state.registry[name]) return method(options);
-		return state.registry[name].reduce((method, registered) => {
-			return registered.hook.bind(null, method, options);
-		}, method)();
-	});
+function f(e, t, n, r) {
+	if (typeof n != "function") throw Error("method for before hook must be a function");
+	return r ||= {}, Array.isArray(t) ? t.reverse().reduce((t, n) => f.bind(null, e, n, t, r), n)() : Promise.resolve().then(() => e.registry[t] ? e.registry[t].reduce((e, t) => t.hook.bind(null, e, r), n)() : n(r));
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/add.js
-function addHook(state, kind, name, hook) {
-	const orig = hook;
-	if (!state.registry[name]) state.registry[name] = [];
-	if (kind === "before") hook = (method, options) => {
-		return Promise.resolve().then(orig.bind(null, options)).then(method.bind(null, options));
-	};
-	if (kind === "after") hook = (method, options) => {
-		let result;
-		return Promise.resolve().then(method.bind(null, options)).then((result_) => {
-			result = result_;
-			return orig(result, options);
-		}).then(() => {
-			return result;
-		});
-	};
-	if (kind === "error") hook = (method, options) => {
-		return Promise.resolve().then(method.bind(null, options)).catch((error) => {
-			return orig(error, options);
-		});
-	};
-	state.registry[name].push({
-		hook,
-		orig
+function ee(e, t, n, r) {
+	let i = r;
+	e.registry[n] || (e.registry[n] = []), t === "before" && (r = (e, t) => Promise.resolve().then(i.bind(null, t)).then(e.bind(null, t))), t === "after" && (r = (e, t) => {
+		let n;
+		return Promise.resolve().then(e.bind(null, t)).then((e) => (n = e, i(n, t))).then(() => n);
+	}), t === "error" && (r = (e, t) => Promise.resolve().then(e.bind(null, t)).catch((e) => i(e, t))), e.registry[n].push({
+		hook: r,
+		orig: i
 	});
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/remove.js
-function removeHook(state, name, method) {
-	if (!state.registry[name]) return;
-	const index = state.registry[name].map((registered) => {
-		return registered.orig;
-	}).indexOf(method);
-	if (index === -1) return;
-	state.registry[name].splice(index, 1);
+function te(e, t, n) {
+	if (!e.registry[t]) return;
+	let r = e.registry[t].map((e) => e.orig).indexOf(n);
+	r !== -1 && e.registry[t].splice(r, 1);
 }
 //#endregion
 //#region node_modules/before-after-hook/index.js
-var bind = Function.bind;
-var bindable = bind.bind(bind);
-function bindApi(hook, state, name) {
-	const removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state]);
-	hook.api = { remove: removeHookRef };
-	hook.remove = removeHookRef;
-	[
+var p = Function.bind, ne = p.bind(p);
+function re(e, t, n) {
+	let r = ne(te, null).apply(null, n ? [t, n] : [t]);
+	e.api = { remove: r }, e.remove = r, [
 		"before",
 		"error",
 		"after",
 		"wrap"
-	].forEach((kind) => {
-		const args = name ? [
-			state,
-			kind,
-			name
-		] : [state, kind];
-		hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
+	].forEach((r) => {
+		let i = n ? [
+			t,
+			r,
+			n
+		] : [t, r];
+		e[r] = e.api[r] = ne(ee, null).apply(null, i);
 	});
 }
-function Singular() {
-	const singularHookName = Symbol("Singular");
-	const singularHookState = { registry: {} };
-	const singularHook = register.bind(null, singularHookState, singularHookName);
-	bindApi(singularHook, singularHookState, singularHookName);
-	return singularHook;
+function ie() {
+	let e = Symbol("Singular"), t = { registry: {} }, n = f.bind(null, t, e);
+	return re(n, t, e), n;
 }
-function Collection() {
-	const state = { registry: {} };
-	const hook = register.bind(null, state);
-	bindApi(hook, state);
-	return hook;
+function ae() {
+	let e = { registry: {} }, t = f.bind(null, e);
+	return re(t, e), t;
 }
-var before_after_hook_default = {
-	Singular,
-	Collection
-};
-//#endregion
-//#region node_modules/@octokit/endpoint/dist-bundle/index.js
-var DEFAULTS = {
+var oe = {
+	Singular: ie,
+	Collection: ae
+}, se = {
 	method: "GET",
 	baseUrl: "https://api.github.com",
 	headers: {
 		accept: "application/vnd.github.v3+json",
-		"user-agent": `octokit-endpoint.js/0.0.0-development ${getUserAgent()}`
+		"user-agent": `octokit-endpoint.js/0.0.0-development ${d()}`
 	},
 	mediaType: { format: "" }
 };
-function lowercaseKeys(object) {
-	if (!object) return {};
-	return Object.keys(object).reduce((newObj, key) => {
-		newObj[key.toLowerCase()] = object[key];
-		return newObj;
-	}, {});
+function ce(e) {
+	return e ? Object.keys(e).reduce((t, n) => (t[n.toLowerCase()] = e[n], t), {}) : {};
 }
-function isPlainObject$1(value) {
-	if (typeof value !== "object" || value === null) return false;
-	if (Object.prototype.toString.call(value) !== "[object Object]") return false;
-	const proto = Object.getPrototypeOf(value);
-	if (proto === null) return true;
-	const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-	return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
+function le(e) {
+	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
+	let t = Object.getPrototypeOf(e);
+	if (t === null) return !0;
+	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
+	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-function mergeDeep(defaults, options) {
-	const result = Object.assign({}, defaults);
-	Object.keys(options).forEach((key) => {
-		if (isPlainObject$1(options[key])) if (!(key in defaults)) Object.assign(result, { [key]: options[key] });
-		else result[key] = mergeDeep(defaults[key], options[key]);
-		else Object.assign(result, { [key]: options[key] });
-	});
-	return result;
+function ue(e, t) {
+	let n = Object.assign({}, e);
+	return Object.keys(t).forEach((r) => {
+		le(t[r]) && r in e ? n[r] = ue(e[r], t[r]) : Object.assign(n, { [r]: t[r] });
+	}), n;
 }
-function removeUndefinedProperties(obj) {
-	for (const key in obj) if (obj[key] === void 0) delete obj[key];
-	return obj;
+function m(e) {
+	for (let t in e) e[t] === void 0 && delete e[t];
+	return e;
 }
-function merge(defaults, route, options) {
-	if (typeof route === "string") {
-		let [method, url] = route.split(" ");
-		options = Object.assign(url ? {
-			method,
-			url
-		} : { url: method }, options);
-	} else options = Object.assign({}, route);
-	options.headers = lowercaseKeys(options.headers);
-	removeUndefinedProperties(options);
-	removeUndefinedProperties(options.headers);
-	const mergedOptions = mergeDeep(defaults || {}, options);
-	if (options.url === "/graphql") {
-		if (defaults && defaults.mediaType.previews?.length) mergedOptions.mediaType.previews = defaults.mediaType.previews.filter((preview) => !mergedOptions.mediaType.previews.includes(preview)).concat(mergedOptions.mediaType.previews);
-		mergedOptions.mediaType.previews = (mergedOptions.mediaType.previews || []).map((preview) => preview.replace(/-preview/, ""));
-	}
-	return mergedOptions;
+function h(e, t, n) {
+	if (typeof t == "string") {
+		let [e, r] = t.split(" ");
+		n = Object.assign(r ? {
+			method: e,
+			url: r
+		} : { url: e }, n);
+	} else n = Object.assign({}, t);
+	n.headers = ce(n.headers), m(n), m(n.headers);
+	let r = ue(e || {}, n);
+	return n.url === "/graphql" && (e && e.mediaType.previews?.length && (r.mediaType.previews = e.mediaType.previews.filter((e) => !r.mediaType.previews.includes(e)).concat(r.mediaType.previews)), r.mediaType.previews = (r.mediaType.previews || []).map((e) => e.replace(/-preview/, ""))), r;
 }
-function addQueryParameters(url, parameters) {
-	const separator = /\?/.test(url) ? "&" : "?";
-	const names = Object.keys(parameters);
-	if (names.length === 0) return url;
-	return url + separator + names.map((name) => {
-		if (name === "q") return "q=" + parameters.q.split("+").map(encodeURIComponent).join("+");
-		return `${name}=${encodeURIComponent(parameters[name])}`;
-	}).join("&");
+function de(e, t) {
+	let n = /\?/.test(e) ? "&" : "?", r = Object.keys(t);
+	return r.length === 0 ? e : e + n + r.map((e) => e === "q" ? "q=" + t.q.split("+").map(encodeURIComponent).join("+") : `${e}=${encodeURIComponent(t[e])}`).join("&");
 }
-var urlVariableRegex = /\{[^{}}]+\}/g;
-function removeNonChars(variableName) {
-	return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
+var fe = /\{[^{}}]+\}/g;
+function pe(e) {
+	return e.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
-function extractUrlVariableNames(url) {
-	const matches = url.match(urlVariableRegex);
-	if (!matches) return [];
-	return matches.map(removeNonChars).reduce((a, b) => a.concat(b), []);
+function me(e) {
+	let t = e.match(fe);
+	return t ? t.map(pe).reduce((e, t) => e.concat(t), []) : [];
 }
-function omit(object, keysToOmit) {
-	const result = { __proto__: null };
-	for (const key of Object.keys(object)) if (keysToOmit.indexOf(key) === -1) result[key] = object[key];
-	return result;
+function g(e, t) {
+	let n = { __proto__: null };
+	for (let r of Object.keys(e)) t.indexOf(r) === -1 && (n[r] = e[r]);
+	return n;
 }
-function encodeReserved(str) {
-	return str.split(/(%[0-9A-Fa-f]{2})/g).map(function(part) {
-		if (!/%[0-9A-Fa-f]/.test(part)) part = encodeURI(part).replace(/%5B/g, "[").replace(/%5D/g, "]");
-		return part;
+function _(e) {
+	return e.split(/(%[0-9A-Fa-f]{2})/g).map(function(e) {
+		return /%[0-9A-Fa-f]/.test(e) || (e = encodeURI(e).replace(/%5B/g, "[").replace(/%5D/g, "]")), e;
 	}).join("");
 }
-function encodeUnreserved(str) {
-	return encodeURIComponent(str).replace(/[!'()*]/g, function(c) {
-		return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+function v(e) {
+	return encodeURIComponent(e).replace(/[!'()*]/g, function(e) {
+		return "%" + e.charCodeAt(0).toString(16).toUpperCase();
 	});
 }
-function encodeValue(operator, value, key) {
-	value = operator === "+" || operator === "#" ? encodeReserved(value) : encodeUnreserved(value);
-	if (key) return encodeUnreserved(key) + "=" + value;
-	else return value;
+function y(e, t, n) {
+	return t = e === "+" || e === "#" ? _(t) : v(t), n ? v(n) + "=" + t : t;
 }
-function isDefined(value) {
-	return value !== void 0 && value !== null;
+function b(e) {
+	return e != null;
 }
-function isKeyOperator(operator) {
-	return operator === ";" || operator === "&" || operator === "?";
+function x(e) {
+	return e === ";" || e === "&" || e === "?";
 }
-function getValues(context, operator, key, modifier) {
-	var value = context[key], result = [];
-	if (isDefined(value) && value !== "") if (typeof value === "string" || typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
-		value = value.toString();
-		if (modifier && modifier !== "*") value = value.substring(0, parseInt(modifier, 10));
-		result.push(encodeValue(operator, value, isKeyOperator(operator) ? key : ""));
-	} else if (modifier === "*") if (Array.isArray(value)) value.filter(isDefined).forEach(function(value2) {
-		result.push(encodeValue(operator, value2, isKeyOperator(operator) ? key : ""));
-	});
-	else Object.keys(value).forEach(function(k) {
-		if (isDefined(value[k])) result.push(encodeValue(operator, value[k], k));
+function he(e, t, n, r) {
+	var i = e[n], a = [];
+	if (b(i) && i !== "") if (typeof i == "string" || typeof i == "number" || typeof i == "bigint" || typeof i == "boolean") i = i.toString(), r && r !== "*" && (i = i.substring(0, parseInt(r, 10))), a.push(y(t, i, x(t) ? n : ""));
+	else if (r === "*") Array.isArray(i) ? i.filter(b).forEach(function(e) {
+		a.push(y(t, e, x(t) ? n : ""));
+	}) : Object.keys(i).forEach(function(e) {
+		b(i[e]) && a.push(y(t, i[e], e));
 	});
 	else {
-		const tmp = [];
-		if (Array.isArray(value)) value.filter(isDefined).forEach(function(value2) {
-			tmp.push(encodeValue(operator, value2));
-		});
-		else Object.keys(value).forEach(function(k) {
-			if (isDefined(value[k])) {
-				tmp.push(encodeUnreserved(k));
-				tmp.push(encodeValue(operator, value[k].toString()));
-			}
-		});
-		if (isKeyOperator(operator)) result.push(encodeUnreserved(key) + "=" + tmp.join(","));
-		else if (tmp.length !== 0) result.push(tmp.join(","));
+		let e = [];
+		Array.isArray(i) ? i.filter(b).forEach(function(n) {
+			e.push(y(t, n));
+		}) : Object.keys(i).forEach(function(n) {
+			b(i[n]) && (e.push(v(n)), e.push(y(t, i[n].toString())));
+		}), x(t) ? a.push(v(n) + "=" + e.join(",")) : e.length !== 0 && a.push(e.join(","));
 	}
-	else if (operator === ";") {
-		if (isDefined(value)) result.push(encodeUnreserved(key));
-	} else if (value === "" && (operator === "&" || operator === "?")) result.push(encodeUnreserved(key) + "=");
-	else if (value === "") result.push("");
-	return result;
+	else t === ";" ? b(i) && a.push(v(n)) : i === "" && (t === "&" || t === "?") ? a.push(v(n) + "=") : i === "" && a.push("");
+	return a;
 }
-function parseUrl(template) {
-	return { expand: expand.bind(null, template) };
+function ge(e) {
+	return { expand: _e.bind(null, e) };
 }
-function expand(template, context) {
-	var operators = [
+function _e(e, t) {
+	var n = [
 		"+",
 		"#",
 		".",
@@ -251,523 +175,268 @@ function expand(template, context) {
 		"?",
 		"&"
 	];
-	template = template.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function(_, expression, literal) {
-		if (expression) {
-			let operator = "";
-			const values = [];
-			if (operators.indexOf(expression.charAt(0)) !== -1) {
-				operator = expression.charAt(0);
-				expression = expression.substr(1);
-			}
-			expression.split(/,/g).forEach(function(variable) {
-				var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-				values.push(getValues(context, operator, tmp[1], tmp[2] || tmp[3]));
-			});
-			if (operator && operator !== "+") {
-				var separator = ",";
-				if (operator === "?") separator = "&";
-				else if (operator !== "#") separator = operator;
-				return (values.length !== 0 ? operator : "") + values.join(separator);
-			} else return values.join(",");
-		} else return encodeReserved(literal);
-	});
-	if (template === "/") return template;
-	else return template.replace(/\/$/, "");
+	return e = e.replace(/\{([^\{\}]+)\}|([^\{\}]+)/g, function(e, r, i) {
+		if (r) {
+			let e = "", i = [];
+			if (n.indexOf(r.charAt(0)) !== -1 && (e = r.charAt(0), r = r.substr(1)), r.split(/,/g).forEach(function(n) {
+				var r = /([^:\*]*)(?::(\d+)|(\*))?/.exec(n);
+				i.push(he(t, e, r[1], r[2] || r[3]));
+			}), e && e !== "+") {
+				var a = ",";
+				return e === "?" ? a = "&" : e !== "#" && (a = e), (i.length === 0 ? "" : e) + i.join(a);
+			} else return i.join(",");
+		} else return _(i);
+	}), e === "/" ? e : e.replace(/\/$/, "");
 }
-function parse$1(options) {
-	let method = options.method.toUpperCase();
-	let url = (options.url || "/").replace(/:([a-z]\w+)/g, "{$1}");
-	let headers = Object.assign({}, options.headers);
-	let body;
-	let parameters = omit(options, [
+function ve(e) {
+	let t = e.method.toUpperCase(), n = (e.url || "/").replace(/:([a-z]\w+)/g, "{$1}"), r = Object.assign({}, e.headers), i, a = g(e, [
 		"method",
 		"baseUrl",
 		"url",
 		"headers",
 		"request",
 		"mediaType"
-	]);
-	const urlVariableNames = extractUrlVariableNames(url);
-	url = parseUrl(url).expand(parameters);
-	if (!/^http/.test(url)) url = options.baseUrl + url;
-	const remainingParameters = omit(parameters, Object.keys(options).filter((option) => urlVariableNames.includes(option)).concat("baseUrl"));
-	if (!/application\/octet-stream/i.test(headers.accept)) {
-		if (options.mediaType.format) headers.accept = headers.accept.split(/,/).map((format) => format.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${options.mediaType.format}`)).join(",");
-		if (url.endsWith("/graphql")) {
-			if (options.mediaType.previews?.length) headers.accept = (headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(options.mediaType.previews).map((preview) => {
-				return `application/vnd.github.${preview}-preview${options.mediaType.format ? `.${options.mediaType.format}` : "+json"}`;
-			}).join(",");
-		}
-	}
-	if (["GET", "HEAD"].includes(method)) url = addQueryParameters(url, remainingParameters);
-	else if ("data" in remainingParameters) body = remainingParameters.data;
-	else if (Object.keys(remainingParameters).length) body = remainingParameters;
-	if (!headers["content-type"] && typeof body !== "undefined") headers["content-type"] = "application/json; charset=utf-8";
-	if (["PATCH", "PUT"].includes(method) && typeof body === "undefined") body = "";
-	return Object.assign({
-		method,
-		url,
-		headers
-	}, typeof body !== "undefined" ? { body } : null, options.request ? { request: options.request } : null);
+	]), o = me(n);
+	n = ge(n).expand(a), /^http/.test(n) || (n = e.baseUrl + n);
+	let s = g(a, Object.keys(e).filter((e) => o.includes(e)).concat("baseUrl"));
+	return /application\/octet-stream/i.test(r.accept) || (e.mediaType.format && (r.accept = r.accept.split(/,/).map((t) => t.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${e.mediaType.format}`)).join(",")), n.endsWith("/graphql") && e.mediaType.previews?.length && (r.accept = (r.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(e.mediaType.previews).map((t) => `application/vnd.github.${t}-preview${e.mediaType.format ? `.${e.mediaType.format}` : "+json"}`).join(","))), ["GET", "HEAD"].includes(t) ? n = de(n, s) : "data" in s ? i = s.data : Object.keys(s).length && (i = s), !r["content-type"] && i !== void 0 && (r["content-type"] = "application/json; charset=utf-8"), ["PATCH", "PUT"].includes(t) && i === void 0 && (i = ""), Object.assign({
+		method: t,
+		url: n,
+		headers: r
+	}, i === void 0 ? null : { body: i }, e.request ? { request: e.request } : null);
 }
-function endpointWithDefaults(defaults, route, options) {
-	return parse$1(merge(defaults, route, options));
+function ye(e, t, n) {
+	return ve(h(e, t, n));
 }
-function withDefaults$2(oldDefaults, newDefaults) {
-	const DEFAULTS2 = merge(oldDefaults, newDefaults);
-	const endpoint2 = endpointWithDefaults.bind(null, DEFAULTS2);
-	return Object.assign(endpoint2, {
-		DEFAULTS: DEFAULTS2,
-		defaults: withDefaults$2.bind(null, DEFAULTS2),
-		merge: merge.bind(null, DEFAULTS2),
-		parse: parse$1
+function be(e, t) {
+	let n = h(e, t), r = ye.bind(null, n);
+	return Object.assign(r, {
+		DEFAULTS: n,
+		defaults: be.bind(null, n),
+		merge: h.bind(null, n),
+		parse: ve
 	});
 }
-var endpoint = withDefaults$2(null, DEFAULTS);
-/*!
-* content-type
-* Copyright(c) 2015 Douglas Christopher Wilson
-* MIT Licensed
-*/
-//#endregion
-//#region node_modules/json-with-bigint/json-with-bigint.js
-var import_dist = (/* @__PURE__ */ __commonJSMin(((exports) => {
-	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.parse = parse;
-	/**
-	* Null object perf optimization. Faster than `Object.create(null)` and `{ __proto__: null }`.
-	*/
-	var NullObject = /* @__PURE__ */ (() => {
-		const C = function() {};
-		C.prototype = Object.create(null);
-		return C;
+var xe = be(null, se), Se = (/* @__PURE__ */ u(((e) => {
+	Object.defineProperty(e, "__esModule", { value: !0 }), e.parse = n;
+	var t = /* @__PURE__ */ (() => {
+		let e = function() {};
+		return e.prototype = Object.create(null), e;
 	})();
-	/**
-	* Parse a `Content-Type` header.
-	*/
-	function parse(header, options) {
-		const len = header.length;
-		let index = skipOWS(header, 0, len);
-		const valueStart = index;
-		index = skipValue(header, index, len);
-		const valueEnd = trailingOWS(header, valueStart, index);
+	function n(e, n) {
+		let r = e.length, i = d(e, 0, r), a = i;
+		i = u(e, i, r);
+		let o = f(e, a, i);
 		return {
-			type: header.slice(valueStart, valueEnd).toLowerCase(),
-			parameters: options?.parameters === false ? new NullObject() : parseParameters(header, index, len)
+			type: e.slice(a, o).toLowerCase(),
+			parameters: n?.parameters === !1 ? new t() : l(e, i, r)
 		};
 	}
-	var SP = 32;
-	var HTAB = 9;
-	var SEMI = 59;
-	var EQ = 61;
-	var DQUOTE = 34;
-	var BSLASH = 92;
-	/**
-	* Parses the parameters of a `Content-Type` header starting at the given index.
-	*/
-	function parseParameters(header, index, len) {
-		const parameters = new NullObject();
-		parameter: while (index < len) {
-			index = skipOWS(header, index + 1, len);
-			const keyStart = index;
-			while (index < len) {
-				const code = header.charCodeAt(index);
-				if (code === SEMI) continue parameter;
-				if (code === EQ) {
-					const keyEnd = trailingOWS(header, keyStart, index);
-					const key = header.slice(keyStart, keyEnd).toLowerCase();
-					index = skipOWS(header, index + 1, len);
-					if (index < len && header.charCodeAt(index) === DQUOTE) {
-						index++;
-						let value = "";
-						while (index < len) {
-							const code = header.charCodeAt(index++);
-							if (code === DQUOTE) {
-								index = skipValue(header, index, len);
-								if (parameters[key] === void 0) parameters[key] = value;
+	var r = 32, i = 9, a = 59, o = 61, s = 34, c = 92;
+	function l(e, n, r) {
+		let i = new t();
+		parameter: for (; n < r;) {
+			n = d(e, n + 1, r);
+			let t = n;
+			for (; n < r;) {
+				let l = e.charCodeAt(n);
+				if (l === a) continue parameter;
+				if (l === o) {
+					let a = f(e, t, n), o = e.slice(t, a).toLowerCase();
+					if (n = d(e, n + 1, r), n < r && e.charCodeAt(n) === s) {
+						n++;
+						let t = "";
+						for (; n < r;) {
+							let a = e.charCodeAt(n++);
+							if (a === s) {
+								n = u(e, n, r), i[o] === void 0 && (i[o] = t);
 								break;
 							}
-							if (code === BSLASH && index < len) {
-								value += header[index++];
+							if (a === c && n < r) {
+								t += e[n++];
 								continue;
 							}
-							value += String.fromCharCode(code);
+							t += String.fromCharCode(a);
 						}
 						continue parameter;
 					}
-					const valueStart = index;
-					index = skipValue(header, index, len);
-					if (parameters[key] === void 0) {
-						const valueEnd = trailingOWS(header, valueStart, index);
-						parameters[key] = header.slice(valueStart, valueEnd);
+					let l = n;
+					if (n = u(e, n, r), i[o] === void 0) {
+						let t = f(e, l, n);
+						i[o] = e.slice(l, t);
 					}
 					continue parameter;
 				}
-				index++;
+				n++;
 			}
 		}
-		return parameters;
+		return i;
 	}
-	/**
-	* Skip over characters until a semicolon.
-	*/
-	function skipValue(str, index, len) {
-		while (index < len) {
-			if (str.charCodeAt(index) === SEMI) break;
-			index++;
+	function u(e, t, n) {
+		for (; t < n && e.charCodeAt(t) !== a;) t++;
+		return t;
+	}
+	function d(e, t, n) {
+		for (; t < n;) {
+			let n = e.charCodeAt(t);
+			if (n !== r && n !== i) break;
+			t++;
 		}
-		return index;
+		return t;
 	}
-	/**
-	* Skip optional whitespace (OWS) in an HTTP header value.
-	*
-	* OWS is defined in RFC 9110 sec 5.6.3 as SP (" ") or HTAB ("\t").
-	*/
-	function skipOWS(header, index, len) {
-		while (index < len) {
-			const char = header.charCodeAt(index);
-			if (char !== SP && char !== HTAB) break;
-			index++;
+	function f(e, t, n) {
+		for (; n > t;) {
+			let t = e.charCodeAt(n - 1);
+			if (t !== r && t !== i) break;
+			n--;
 		}
-		return index;
+		return n;
 	}
-	/**
-	* Trim optional whitespace (OWS) from the end of a substring.
-	*
-	* OWS is defined in RFC 9110 sec 5.6.3 as SP (" ") or HTAB ("\t").
-	*/
-	function trailingOWS(header, start, end) {
-		while (end > start) {
-			const char = header.charCodeAt(end - 1);
-			if (char !== SP && char !== HTAB) break;
-			end--;
-		}
-		return end;
-	}
-})))();
-var intRegex = /^-?\d+$/;
-var noiseValue = /^-?\d+n+$/;
-var originalStringify = JSON.stringify;
-var originalParse = JSON.parse;
-var customFormat = /^-?\d+n$/;
-var bigIntsStringify = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g;
-var noiseStringify = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g;
-/**
-* @typedef {(this: any, key: string | number | undefined, value: any) => any} Replacer
-* @typedef {(key: string | number | undefined, value: any, context?: { source: string }) => any} Reviver
-*/
-/**
-* Converts a JavaScript value to a JSON string.
-*
-* Supports serialization of BigInt values using two strategies:
-* 1. Custom format "123n" → "123" (universal fallback)
-* 2. Native JSON.rawJSON() (Node.js 22+, fastest) when available
-*
-* All other values are serialized exactly like native JSON.stringify().
-*
-* @param {*} value The value to convert to a JSON string.
-* @param {Replacer | Array<string | number> | null} [replacer]
-*   A function that alters the behavior of the stringification process,
-*   or an array of strings/numbers to indicate properties to exclude.
-* @param {string | number} [space]
-*   A string or number to specify indentation or pretty-printing.
-* @returns {string} The JSON string representation.
-*/
-var JSONStringify = (value, replacer, space) => {
-	if ("rawJSON" in JSON) return originalStringify(value, (key, value) => {
-		if (typeof value === "bigint") return JSON.rawJSON(value.toString());
-		if (typeof replacer === "function") return replacer(key, value);
-		if (Array.isArray(replacer) && replacer.includes(key)) return value;
-		return value;
-	}, space);
-	if (!value) return originalStringify(value, replacer, space);
-	return originalStringify(value, (key, value) => {
-		if (typeof value === "string" && noiseValue.test(value)) return value.toString() + "n";
-		if (typeof value === "bigint") return value.toString() + "n";
-		if (typeof replacer === "function") return replacer(key, value);
-		if (Array.isArray(replacer) && replacer.includes(key)) return value;
-		return value;
-	}, space).replace(bigIntsStringify, "$1$2$3").replace(noiseStringify, "$1$2$3");
-};
-var featureCache = /* @__PURE__ */ new Map();
-/**
-* Detects if the current JSON.parse implementation supports the context.source feature.
-*
-* Uses toString() fingerprinting to cache results and automatically detect runtime
-* replacements of JSON.parse (polyfills, mocks, etc.).
-*
-* @returns {boolean} true if context.source is supported, false otherwise.
-*/
-var isContextSourceSupported = () => {
-	const parseFingerprint = JSON.parse.toString();
-	if (featureCache.has(parseFingerprint)) return featureCache.get(parseFingerprint);
+})))(), Ce = /^-?\d+$/, S = /^-?\d+n+$/, C = JSON.stringify, w = JSON.parse, we = /^-?\d+n$/, Te = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ee = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, De = (e, t, n) => "rawJSON" in JSON ? C(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? C(e, (e, n) => typeof n == "string" && S.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(Te, "$1$2$3").replace(Ee, "$1$2$3") : C(e, t, n), T = /* @__PURE__ */ new Map(), Oe = () => {
+	let e = JSON.parse.toString();
+	if (T.has(e)) return T.get(e);
 	try {
-		const result = JSON.parse("1", (_, __, context) => !!context?.source && context.source === "1");
-		featureCache.set(parseFingerprint, result);
-		return result;
+		let t = JSON.parse("1", (e, t, n) => !!n?.source && n.source === "1");
+		return T.set(e, t), t;
 	} catch {
-		featureCache.set(parseFingerprint, false);
-		return false;
+		return T.set(e, !1), !1;
 	}
-};
-/**
-* Reviver function that converts custom-format BigInt strings back to BigInt values.
-* Also handles "noise" strings that accidentally match the BigInt format.
-*
-* @param {string | number | undefined} key The object key.
-* @param {*} value The value being parsed.
-* @param {object} [context] Parse context (if supported by JSON.parse).
-* @param {Reviver} [userReviver] User's custom reviver function.
-* @returns {any} The transformed value.
-*/
-var convertMarkedBigIntsReviver = (key, value, context, userReviver) => {
-	if (typeof value === "string" && customFormat.test(value)) return BigInt(value.slice(0, -1));
-	if (typeof value === "string" && noiseValue.test(value)) return value.slice(0, -1);
-	if (typeof userReviver !== "function") return value;
-	return userReviver(key, value, context);
-};
-/**
-* Fast JSON.parse implementation (~2x faster than classic fallback).
-* Uses JSON.parse's context.source feature to detect integers and convert
-* large numbers directly to BigInt without string manipulation.
-*
-* Does not support legacy custom format from v1 of this library.
-*
-* @param {string} text JSON string to parse.
-* @param {Reviver} [reviver] Transform function to apply to each value.
-* @returns {any} Parsed JavaScript value.
-*/
-var JSONParseV2 = (text, reviver) => {
-	return JSON.parse(text, (key, value, context) => {
-		const isBigNumber = typeof value === "number" && (value > Number.MAX_SAFE_INTEGER || value < Number.MIN_SAFE_INTEGER);
-		const isInt = context && intRegex.test(context.source);
-		if (isBigNumber && isInt) return BigInt(context.source);
-		if (typeof reviver !== "function") return value;
-		return reviver(key, value, context);
-	});
-};
-var MAX_INT = Number.MAX_SAFE_INTEGER.toString();
-var MAX_DIGITS = MAX_INT.length;
-var stringsOrLargeNumbers = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g;
-var noiseValueWithQuotes = /^"-?\d+n+"$/;
-/**
-* Converts a JSON string into a JavaScript value.
-*
-* Supports parsing of large integers using two strategies:
-* 1. Classic fallback: Marks large numbers with "123n" format, then converts to BigInt
-* 2. Fast path (JSONParseV2): Uses context.source feature (~2x faster) when available
-*
-* All other JSON values are parsed exactly like native JSON.parse().
-*
-* @param {string} text A valid JSON string.
-* @param {Reviver} [reviver]
-*   A function that transforms the results. This function is called for each member
-*   of the object. If a member contains nested objects, the nested objects are
-*   transformed before the parent object is.
-* @returns {any} The parsed JavaScript value.
-* @throws {SyntaxError} If text is not valid JSON.
-*/
-var JSONParse = (text, reviver) => {
-	if (!text) return originalParse(text, reviver);
-	if (isContextSourceSupported()) return JSONParseV2(text, reviver);
-	return originalParse(text.replace(stringsOrLargeNumbers, (text, digits, fractional, exponential) => {
-		const isString = text[0] === "\"";
-		if (isString && noiseValueWithQuotes.test(text)) return text.substring(0, text.length - 1) + "n\"";
-		const isFractionalOrExponential = fractional || exponential;
-		const isLessThanMaxSafeInt = digits && (digits.length < MAX_DIGITS || digits.length === MAX_DIGITS && digits <= MAX_INT);
-		if (isString || isFractionalOrExponential || isLessThanMaxSafeInt) return text;
-		return "\"" + text + "n\"";
-	}), (key, value, context) => convertMarkedBigIntsReviver(key, value, context, reviver));
-};
-//#endregion
-//#region node_modules/@octokit/request-error/dist-src/index.js
-var RequestError = class extends Error {
+}, ke = (e, t, n, r) => typeof t == "string" && we.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && S.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, Ae = (e, t) => JSON.parse(e, (e, n, r) => {
+	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && Ce.test(r.source);
+	return i && a ? BigInt(r.source) : typeof t == "function" ? t(e, n, r) : n;
+}), E = (2 ** 53 - 1).toString(), D = E.length, je = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Me = /^"-?\d+n+"$/, Ne = (e, t) => e ? Oe() ? Ae(e, t) : w(e.replace(je, (e, t, n, r) => {
+	let i = e[0] === "\"";
+	if (i && Me.test(e)) return e.substring(0, e.length - 1) + "n\"";
+	let a = n || r, o = t && (t.length < D || t.length === D && t <= E);
+	return i || a || o ? e : "\"" + e + "n\"";
+}), (e, n, r) => ke(e, n, r, t)) : w(e, t), O = class extends Error {
 	name;
-	/**
-	* http status code
-	*/
 	status;
-	/**
-	* Request options that lead to the error.
-	*/
 	request;
-	/**
-	* Response object if a response was received
-	*/
 	response;
-	constructor(message, statusCode, options) {
-		super(message, { cause: options.cause });
-		this.name = "HttpError";
-		this.status = Number.parseInt(statusCode);
-		if (Number.isNaN(this.status)) this.status = 0;
+	constructor(e, t, n) {
 		/* v8 ignore else -- @preserve -- Bug with vitest coverage where it sees an else branch that doesn't exist */
-		if ("response" in options) this.response = options.response;
-		const requestCopy = Object.assign({}, options.request);
-		if (options.request.headers.authorization) requestCopy.headers = Object.assign({}, options.request.headers, { authorization: options.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]") });
-		requestCopy.url = requestCopy.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]");
-		this.request = requestCopy;
+		super(e, { cause: n.cause }), this.name = "HttpError", this.status = Number.parseInt(t), Number.isNaN(this.status) && (this.status = 0), "response" in n && (this.response = n.response);
+		let r = Object.assign({}, n.request);
+		n.request.headers.authorization && (r.headers = Object.assign({}, n.request.headers, { authorization: n.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]") })), r.url = r.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]"), this.request = r;
 	}
-};
-//#endregion
-//#region node_modules/@octokit/request/dist-bundle/index.js
-var defaults_default = { headers: { "user-agent": `octokit-request.js/10.0.10 ${getUserAgent()}` } };
-function isPlainObject(value) {
-	if (typeof value !== "object" || value === null) return false;
-	if (Object.prototype.toString.call(value) !== "[object Object]") return false;
-	const proto = Object.getPrototypeOf(value);
-	if (proto === null) return true;
-	const Ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-	return typeof Ctor === "function" && Ctor instanceof Ctor && Function.prototype.call(Ctor) === Function.prototype.call(value);
+}, Pe = { headers: { "user-agent": `octokit-request.js/10.0.10 ${d()}` } };
+function Fe(e) {
+	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
+	let t = Object.getPrototypeOf(e);
+	if (t === null) return !0;
+	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
+	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-var noop$1 = () => "";
-async function fetchWrapper(requestOptions) {
-	const fetch = requestOptions.request?.fetch || globalThis.fetch;
-	if (!fetch) throw new Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
-	const log = requestOptions.request?.log || console;
-	const parseSuccessResponseBody = requestOptions.request?.parseSuccessResponseBody !== false;
-	const body = isPlainObject(requestOptions.body) || Array.isArray(requestOptions.body) ? JSONStringify(requestOptions.body) : requestOptions.body;
-	const requestHeaders = Object.fromEntries(Object.entries(requestOptions.headers).map(([name, value]) => [name, String(value)]));
-	let fetchResponse;
+var k = () => "";
+async function Ie(e) {
+	let t = e.request?.fetch || globalThis.fetch;
+	if (!t) throw Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
+	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = Fe(e.body) || Array.isArray(e.body) ? De(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
 	try {
-		fetchResponse = await fetch(requestOptions.url, {
-			method: requestOptions.method,
-			body,
-			redirect: requestOptions.request?.redirect,
-			headers: requestHeaders,
-			signal: requestOptions.request?.signal,
-			...requestOptions.body && { duplex: "half" }
+		o = await t(e.url, {
+			method: e.method,
+			body: i,
+			redirect: e.request?.redirect,
+			headers: a,
+			signal: e.request?.signal,
+			...e.body && { duplex: "half" }
 		});
-	} catch (error) {
-		let message = "Unknown Error";
-		if (error instanceof Error) {
-			if (error.name === "AbortError") {
-				error.status = 500;
-				throw error;
-			}
-			message = error.message;
-			if (error.name === "TypeError" && "cause" in error) {
-				if (error.cause instanceof Error) message = error.cause.message;
-				else if (typeof error.cause === "string") message = error.cause;
-			}
+	} catch (t) {
+		let n = "Unknown Error";
+		if (t instanceof Error) {
+			if (t.name === "AbortError") throw t.status = 500, t;
+			n = t.message, t.name === "TypeError" && "cause" in t && (t.cause instanceof Error ? n = t.cause.message : typeof t.cause == "string" && (n = t.cause));
 		}
-		const requestError = new RequestError(message, 500, { request: requestOptions });
-		requestError.cause = error;
-		throw requestError;
+		let r = new O(n, 500, { request: e });
+		throw r.cause = t, r;
 	}
-	const status = fetchResponse.status;
-	const url = fetchResponse.url;
-	const responseHeaders = {};
-	for (const [key, value] of fetchResponse.headers) responseHeaders[key] = value;
-	const octokitResponse = {
-		url,
-		status,
-		headers: responseHeaders,
+	let s = o.status, c = o.url, l = {};
+	for (let [e, t] of o.headers) l[e] = t;
+	let u = {
+		url: c,
+		status: s,
+		headers: l,
 		data: ""
 	};
-	if ("deprecation" in responseHeaders) {
-		const matches = responseHeaders.link && responseHeaders.link.match(/<([^<>]+)>; rel="deprecation"/);
-		const deprecationLink = matches && matches.pop();
-		log.warn(`[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${responseHeaders.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`);
+	if ("deprecation" in l) {
+		let t = l.link && l.link.match(/<([^<>]+)>; rel="deprecation"/), r = t && t.pop();
+		n.warn(`[@octokit/request] "${e.method} ${e.url}" is deprecated. It is scheduled to be removed on ${l.sunset}${r ? `. See ${r}` : ""}`);
 	}
-	if (status === 204 || status === 205) return octokitResponse;
-	if (requestOptions.method === "HEAD") {
-		if (status < 400) return octokitResponse;
-		throw new RequestError(fetchResponse.statusText, status, {
-			response: octokitResponse,
-			request: requestOptions
+	if (s === 204 || s === 205) return u;
+	if (e.method === "HEAD") {
+		if (s < 400) return u;
+		throw new O(o.statusText, s, {
+			response: u,
+			request: e
 		});
 	}
-	if (status === 304) {
-		octokitResponse.data = await getResponseData(fetchResponse);
-		throw new RequestError("Not modified", status, {
-			response: octokitResponse,
-			request: requestOptions
-		});
-	}
-	if (status >= 400) {
-		octokitResponse.data = await getResponseData(fetchResponse);
-		throw new RequestError(toErrorMessage(octokitResponse.data), status, {
-			response: octokitResponse,
-			request: requestOptions
-		});
-	}
-	octokitResponse.data = parseSuccessResponseBody ? await getResponseData(fetchResponse) : fetchResponse.body;
-	return octokitResponse;
+	if (s === 304) throw u.data = await A(o), new O("Not modified", s, {
+		response: u,
+		request: e
+	});
+	if (s >= 400) throw u.data = await A(o), new O(Re(u.data), s, {
+		response: u,
+		request: e
+	});
+	return u.data = r ? await A(o) : o.body, u;
 }
-async function getResponseData(response) {
-	const contentType = response.headers.get("content-type");
-	if (!contentType) return response.text().catch(noop$1);
-	const mimetype = (0, import_dist.parse)(contentType);
-	if (isJSONResponse(mimetype)) {
-		let text = "";
+async function A(e) {
+	let t = e.headers.get("content-type");
+	if (!t) return e.text().catch(k);
+	let n = (0, Se.parse)(t);
+	if (Le(n)) {
+		let t = "";
 		try {
-			text = await response.text();
-			return JSONParse(text);
-		} catch (err) {
-			return text;
+			return t = await e.text(), Ne(t);
+		} catch {
+			return t;
 		}
-	} else if (mimetype.type.startsWith("text/") || mimetype.parameters.charset?.toLowerCase() === "utf-8") return response.text().catch(noop$1);
-	else return response.arrayBuffer().catch(
+	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(k);
+	else return e.arrayBuffer().catch(
 		/* v8 ignore next -- @preserve */
 		() => /* @__PURE__ */ new ArrayBuffer(0)
 	);
 }
-function isJSONResponse(mimetype) {
-	return mimetype.type === "application/json" || mimetype.type === "application/scim+json";
+function Le(e) {
+	return e.type === "application/json" || e.type === "application/scim+json";
 }
-function toErrorMessage(data) {
-	if (typeof data === "string") return data;
-	if (data instanceof ArrayBuffer) return "Unknown error";
-	if ("message" in data) {
-		const suffix = "documentation_url" in data ? ` - ${data.documentation_url}` : "";
-		return Array.isArray(data.errors) ? `${data.message}: ${data.errors.map((v) => JSON.stringify(v)).join(", ")}${suffix}` : `${data.message}${suffix}`;
+function Re(e) {
+	if (typeof e == "string") return e;
+	if (e instanceof ArrayBuffer) return "Unknown error";
+	if ("message" in e) {
+		let t = "documentation_url" in e ? ` - ${e.documentation_url}` : "";
+		return Array.isArray(e.errors) ? `${e.message}: ${e.errors.map((e) => JSON.stringify(e)).join(", ")}${t}` : `${e.message}${t}`;
 	}
-	return `Unknown error: ${JSON.stringify(data)}`;
+	return `Unknown error: ${JSON.stringify(e)}`;
 }
-function withDefaults$1(oldEndpoint, newDefaults) {
-	const endpoint2 = oldEndpoint.defaults(newDefaults);
-	const newApi = function(route, parameters) {
-		const endpointOptions = endpoint2.merge(route, parameters);
-		if (!endpointOptions.request || !endpointOptions.request.hook) return fetchWrapper(endpoint2.parse(endpointOptions));
-		const request2 = (route2, parameters2) => {
-			return fetchWrapper(endpoint2.parse(endpoint2.merge(route2, parameters2)));
-		};
-		Object.assign(request2, {
-			endpoint: endpoint2,
-			defaults: withDefaults$1.bind(null, endpoint2)
-		});
-		return endpointOptions.request.hook(request2, endpointOptions);
-	};
-	return Object.assign(newApi, {
-		endpoint: endpoint2,
-		defaults: withDefaults$1.bind(null, endpoint2)
+function j(e, t) {
+	let n = e.defaults(t);
+	return Object.assign(function(e, t) {
+		let r = n.merge(e, t);
+		if (!r.request || !r.request.hook) return Ie(n.parse(r));
+		let i = (e, t) => Ie(n.parse(n.merge(e, t)));
+		return Object.assign(i, {
+			endpoint: n,
+			defaults: j.bind(null, n)
+		}), r.request.hook(i, r);
+	}, {
+		endpoint: n,
+		defaults: j.bind(null, n)
 	});
 }
-var request = withDefaults$1(endpoint, defaults_default);
-/* v8 ignore next -- @preserve */
-/* v8 ignore else -- @preserve */
-//#endregion
-//#region node_modules/@octokit/graphql/dist-bundle/index.js
-var VERSION$5 = "0.0.0-development";
-function _buildMessageForResponseErrors(data) {
-	return `Request failed due to following response errors:
-` + data.errors.map((e) => ` - ${e.message}`).join("\n");
+var M = j(xe, Pe), ze = "0.0.0-development";
+function Be(e) {
+	return "Request failed due to following response errors:\n" + e.errors.map((e) => ` - ${e.message}`).join("\n");
 }
-var GraphqlResponseError = class extends Error {
-	constructor(request2, headers, response) {
-		super(_buildMessageForResponseErrors(response));
-		this.request = request2;
-		this.headers = headers;
-		this.response = response;
-		this.errors = response.errors;
-		this.data = response.data;
-		if (Error.captureStackTrace) Error.captureStackTrace(this, this.constructor);
+var Ve = class extends Error {
+	constructor(e, t, n) {
+		super(Be(n)), this.request = e, this.headers = t, this.response = n, this.errors = n.errors, this.data = n.data, Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
 	}
 	name = "GraphqlResponseError";
 	errors;
 	data;
-};
-var NON_VARIABLE_OPTIONS = [
+}, He = [
 	"method",
 	"baseUrl",
 	"url",
@@ -776,261 +445,171 @@ var NON_VARIABLE_OPTIONS = [
 	"query",
 	"mediaType",
 	"operationName"
-];
-var FORBIDDEN_VARIABLE_OPTIONS = [
+], Ue = [
 	"query",
 	"method",
 	"url"
-];
-var GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
-function graphql(request2, query, options) {
-	if (options) {
-		if (typeof query === "string" && "query" in options) return Promise.reject(/* @__PURE__ */ new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
-		for (const key in options) {
-			if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
-			return Promise.reject(/* @__PURE__ */ new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
-		}
+], N = /\/api\/v3\/?$/;
+function We(e, t, n) {
+	if (n) {
+		if (typeof t == "string" && "query" in n) return Promise.reject(/* @__PURE__ */ Error("[@octokit/graphql] \"query\" cannot be used as variable name"));
+		for (let e in n) if (Ue.includes(e)) return Promise.reject(/* @__PURE__ */ Error(`[@octokit/graphql] "${e}" cannot be used as variable name`));
 	}
-	const parsedOptions = typeof query === "string" ? Object.assign({ query }, options) : query;
-	const requestOptions = Object.keys(parsedOptions).reduce((result, key) => {
-		if (NON_VARIABLE_OPTIONS.includes(key)) {
-			result[key] = parsedOptions[key];
-			return result;
+	let r = typeof t == "string" ? Object.assign({ query: t }, n) : t, i = Object.keys(r).reduce((e, t) => He.includes(t) ? (e[t] = r[t], e) : (e.variables ||= {}, e.variables[t] = r[t], e), {}), a = r.baseUrl || e.endpoint.DEFAULTS.baseUrl;
+	return N.test(a) && (i.url = a.replace(N, "/api/graphql")), e(i).then((e) => {
+		if (e.data.errors) {
+			let t = {};
+			for (let n of Object.keys(e.headers)) t[n] = e.headers[n];
+			throw new Ve(i, t, e.data);
 		}
-		if (!result.variables) result.variables = {};
-		result.variables[key] = parsedOptions[key];
-		return result;
-	}, {});
-	const baseUrl = parsedOptions.baseUrl || request2.endpoint.DEFAULTS.baseUrl;
-	if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
-	return request2(requestOptions).then((response) => {
-		if (response.data.errors) {
-			const headers = {};
-			for (const key of Object.keys(response.headers)) headers[key] = response.headers[key];
-			throw new GraphqlResponseError(requestOptions, headers, response.data);
-		}
-		return response.data.data;
+		return e.data.data;
 	});
 }
-function withDefaults(request2, newDefaults) {
-	const newRequest = request2.defaults(newDefaults);
-	const newApi = (query, options) => {
-		return graphql(newRequest, query, options);
-	};
-	return Object.assign(newApi, {
-		defaults: withDefaults.bind(null, newRequest),
-		endpoint: newRequest.endpoint
+function P(e, t) {
+	let n = e.defaults(t);
+	return Object.assign((e, t) => We(n, e, t), {
+		defaults: P.bind(null, n),
+		endpoint: n.endpoint
 	});
 }
-withDefaults(request, {
-	headers: { "user-agent": `octokit-graphql.js/${VERSION$5} ${getUserAgent()}` },
+P(M, {
+	headers: { "user-agent": `octokit-graphql.js/${ze} ${d()}` },
 	method: "POST",
 	url: "/graphql"
 });
-function withCustomRequest(customRequest) {
-	return withDefaults(customRequest, {
+function Ge(e) {
+	return P(e, {
 		method: "POST",
 		url: "/graphql"
 	});
 }
 //#endregion
 //#region node_modules/@octokit/auth-token/dist-bundle/index.js
-var b64url = "(?:[a-zA-Z0-9_-]+)";
-var sep = "\\.";
-var jwtRE = new RegExp(`^${b64url}${sep}${b64url}${sep}${b64url}$`);
-var isJWT = jwtRE.test.bind(jwtRE);
-async function auth(token) {
-	const isApp = isJWT(token);
-	const isInstallation = token.startsWith("v1.") || token.startsWith("ghs_");
-	const isUserToServer = token.startsWith("ghu_");
+var F = "(?:[a-zA-Z0-9_-]+)", I = "\\.", L = RegExp(`^${F}${I}${F}${I}${F}$`), Ke = L.test.bind(L);
+async function qe(e) {
+	let t = Ke(e), n = e.startsWith("v1.") || e.startsWith("ghs_"), r = e.startsWith("ghu_");
 	return {
 		type: "token",
-		token,
-		tokenType: isApp ? "app" : isInstallation ? "installation" : isUserToServer ? "user-to-server" : "oauth"
+		token: e,
+		tokenType: t ? "app" : n ? "installation" : r ? "user-to-server" : "oauth"
 	};
 }
-function withAuthorizationPrefix(token) {
-	if (token.split(/\./).length === 3) return `bearer ${token}`;
-	return `token ${token}`;
+function Je(e) {
+	return e.split(/\./).length === 3 ? `bearer ${e}` : `token ${e}`;
 }
-async function hook(token, request, route, parameters) {
-	const endpoint = request.endpoint.merge(route, parameters);
-	endpoint.headers.authorization = withAuthorizationPrefix(token);
-	return request(endpoint);
+async function Ye(e, t, n, r) {
+	let i = t.endpoint.merge(n, r);
+	return i.headers.authorization = Je(e), t(i);
 }
-var createTokenAuth = function createTokenAuth2(token) {
-	if (!token) throw new Error("[@octokit/auth-token] No token passed to createTokenAuth");
-	if (typeof token !== "string") throw new Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
-	token = token.replace(/^(token|bearer) +/i, "");
-	return Object.assign(auth.bind(null, token), { hook: hook.bind(null, token) });
-};
-//#endregion
-//#region node_modules/@octokit/core/dist-src/version.js
-var VERSION$4 = "7.0.6";
-//#endregion
-//#region node_modules/@octokit/core/dist-src/index.js
-var noop = () => {};
-var consoleWarn = console.warn.bind(console);
-var consoleError = console.error.bind(console);
-function createLogger(logger = {}) {
-	if (typeof logger.debug !== "function") logger.debug = noop;
-	if (typeof logger.info !== "function") logger.info = noop;
-	if (typeof logger.warn !== "function") logger.warn = consoleWarn;
-	if (typeof logger.error !== "function") logger.error = consoleError;
-	return logger;
+var Xe = function(e) {
+	if (!e) throw Error("[@octokit/auth-token] No token passed to createTokenAuth");
+	if (typeof e != "string") throw Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
+	return e = e.replace(/^(token|bearer) +/i, ""), Object.assign(qe.bind(null, e), { hook: Ye.bind(null, e) });
+}, R = "7.0.6", z = () => {}, Ze = console.warn.bind(console), Qe = console.error.bind(console);
+function $e(e = {}) {
+	return typeof e.debug != "function" && (e.debug = z), typeof e.info != "function" && (e.info = z), typeof e.warn != "function" && (e.warn = Ze), typeof e.error != "function" && (e.error = Qe), e;
 }
-var userAgentTrail = `octokit-core.js/${VERSION$4} ${getUserAgent()}`;
-var Octokit$1 = class {
-	static VERSION = VERSION$4;
-	static defaults(defaults) {
-		const OctokitWithDefaults = class extends this {
-			constructor(...args) {
-				const options = args[0] || {};
-				if (typeof defaults === "function") {
-					super(defaults(options));
+var B = `octokit-core.js/${R} ${d()}`, et = class {
+	static VERSION = R;
+	static defaults(e) {
+		return class extends this {
+			constructor(...t) {
+				let n = t[0] || {};
+				if (typeof e == "function") {
+					super(e(n));
 					return;
 				}
-				super(Object.assign({}, defaults, options, options.userAgent && defaults.userAgent ? { userAgent: `${options.userAgent} ${defaults.userAgent}` } : null));
+				super(Object.assign({}, e, n, n.userAgent && e.userAgent ? { userAgent: `${n.userAgent} ${e.userAgent}` } : null));
 			}
 		};
-		return OctokitWithDefaults;
 	}
 	static plugins = [];
-	/**
-	* Attach a plugin (or many) to your Octokit instance.
-	*
-	* @example
-	* const API = Octokit.plugin(plugin1, plugin2, plugin3, ...)
-	*/
-	static plugin(...newPlugins) {
-		const currentPlugins = this.plugins;
-		const NewOctokit = class extends this {
-			static plugins = currentPlugins.concat(newPlugins.filter((plugin) => !currentPlugins.includes(plugin)));
+	static plugin(...e) {
+		let t = this.plugins;
+		return class extends this {
+			static plugins = t.concat(e.filter((e) => !t.includes(e)));
 		};
-		return NewOctokit;
 	}
-	constructor(options = {}) {
-		const hook = new before_after_hook_default.Collection();
-		const requestDefaults = {
-			baseUrl: request.endpoint.DEFAULTS.baseUrl,
+	constructor(e = {}) {
+		let t = new oe.Collection(), n = {
+			baseUrl: M.endpoint.DEFAULTS.baseUrl,
 			headers: {},
-			request: Object.assign({}, options.request, { hook: hook.bind(null, "request") }),
+			request: Object.assign({}, e.request, { hook: t.bind(null, "request") }),
 			mediaType: {
 				previews: [],
 				format: ""
 			}
 		};
-		requestDefaults.headers["user-agent"] = options.userAgent ? `${options.userAgent} ${userAgentTrail}` : userAgentTrail;
-		if (options.baseUrl) requestDefaults.baseUrl = options.baseUrl;
-		if (options.previews) requestDefaults.mediaType.previews = options.previews;
-		if (options.timeZone) requestDefaults.headers["time-zone"] = options.timeZone;
-		this.request = request.defaults(requestDefaults);
-		this.graphql = withCustomRequest(this.request).defaults(requestDefaults);
-		this.log = createLogger(options.log);
-		this.hook = hook;
-		if (!options.authStrategy) if (!options.auth) this.auth = async () => ({ type: "unauthenticated" });
-		else {
-			const auth = createTokenAuth(options.auth);
-			hook.wrap("request", auth.hook);
-			this.auth = auth;
-		}
-		else {
-			const { authStrategy, ...otherOptions } = options;
-			const auth = authStrategy(Object.assign({
+		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${B}` : B, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = M.defaults(n), this.graphql = Ge(this.request).defaults(n), this.log = $e(e.log), this.hook = t, e.authStrategy) {
+			let { authStrategy: n, ...r } = e, i = n(Object.assign({
 				request: this.request,
 				log: this.log,
 				octokit: this,
-				octokitOptions: otherOptions
-			}, options.auth));
-			hook.wrap("request", auth.hook);
-			this.auth = auth;
+				octokitOptions: r
+			}, e.auth));
+			t.wrap("request", i.hook), this.auth = i;
+		} else if (!e.auth) this.auth = async () => ({ type: "unauthenticated" });
+		else {
+			let n = Xe(e.auth);
+			t.wrap("request", n.hook), this.auth = n;
 		}
-		const classConstructor = this.constructor;
-		for (let i = 0; i < classConstructor.plugins.length; ++i) Object.assign(this, classConstructor.plugins[i](this, options));
+		let r = this.constructor;
+		for (let t = 0; t < r.plugins.length; ++t) Object.assign(this, r.plugins[t](this, e));
 	}
 	request;
 	graphql;
 	log;
 	hook;
 	auth;
-};
-//#endregion
-//#region node_modules/@octokit/plugin-request-log/dist-src/version.js
-var VERSION$3 = "6.0.0";
+}, tt = "6.0.0";
 //#endregion
 //#region node_modules/@octokit/plugin-request-log/dist-src/index.js
-function requestLog(octokit) {
-	octokit.hook.wrap("request", (request, options) => {
-		octokit.log.debug("request", options);
-		const start = Date.now();
-		const requestOptions = octokit.request.endpoint.parse(options);
-		const path = requestOptions.url.replace(options.baseUrl, "");
-		return request(options).then((response) => {
-			const requestId = response.headers["x-github-request-id"];
-			octokit.log.info(`${requestOptions.method} ${path} - ${response.status} with id ${requestId} in ${Date.now() - start}ms`);
-			return response;
-		}).catch((error) => {
-			const requestId = error.response?.headers["x-github-request-id"] || "UNKNOWN";
-			octokit.log.error(`${requestOptions.method} ${path} - ${error.status} with id ${requestId} in ${Date.now() - start}ms`);
-			throw error;
+function V(e) {
+	e.hook.wrap("request", (t, n) => {
+		e.log.debug("request", n);
+		let r = Date.now(), i = e.request.endpoint.parse(n), a = i.url.replace(n.baseUrl, "");
+		return t(n).then((t) => {
+			let n = t.headers["x-github-request-id"];
+			return e.log.info(`${i.method} ${a} - ${t.status} with id ${n} in ${Date.now() - r}ms`), t;
+		}).catch((t) => {
+			let n = t.response?.headers["x-github-request-id"] || "UNKNOWN";
+			throw e.log.error(`${i.method} ${a} - ${t.status} with id ${n} in ${Date.now() - r}ms`), t;
 		});
 	});
 }
-requestLog.VERSION = VERSION$3;
+V.VERSION = tt;
 //#endregion
 //#region node_modules/@octokit/plugin-paginate-rest/dist-bundle/index.js
-var VERSION$2 = "0.0.0-development";
-function normalizePaginatedListResponse(response) {
-	if (!response.data) return {
-		...response,
+var nt = "0.0.0-development";
+function rt(e) {
+	if (!e.data) return {
+		...e,
 		data: []
 	};
-	if (!(("total_count" in response.data || "total_commits" in response.data) && !("url" in response.data))) return response;
-	const incompleteResults = response.data.incomplete_results;
-	const repositorySelection = response.data.repository_selection;
-	const totalCount = response.data.total_count;
-	const totalCommits = response.data.total_commits;
-	delete response.data.incomplete_results;
-	delete response.data.repository_selection;
-	delete response.data.total_count;
-	delete response.data.total_commits;
-	const namespaceKey = Object.keys(response.data)[0];
-	response.data = response.data[namespaceKey];
-	if (typeof incompleteResults !== "undefined") response.data.incomplete_results = incompleteResults;
-	if (typeof repositorySelection !== "undefined") response.data.repository_selection = repositorySelection;
-	response.data.total_count = totalCount;
-	response.data.total_commits = totalCommits;
-	return response;
+	if (!(("total_count" in e.data || "total_commits" in e.data) && !("url" in e.data))) return e;
+	let t = e.data.incomplete_results, n = e.data.repository_selection, r = e.data.total_count, i = e.data.total_commits;
+	delete e.data.incomplete_results, delete e.data.repository_selection, delete e.data.total_count, delete e.data.total_commits;
+	let a = Object.keys(e.data)[0];
+	return e.data = e.data[a], t !== void 0 && (e.data.incomplete_results = t), n !== void 0 && (e.data.repository_selection = n), e.data.total_count = r, e.data.total_commits = i, e;
 }
-function iterator(octokit, route, parameters) {
-	const options = typeof route === "function" ? route.endpoint(parameters) : octokit.request.endpoint(route, parameters);
-	const requestMethod = typeof route === "function" ? route : octokit.request;
-	const method = options.method;
-	const headers = options.headers;
-	let url = options.url;
+function H(e, t, n) {
+	let r = typeof t == "function" ? t.endpoint(n) : e.request.endpoint(t, n), i = typeof t == "function" ? t : e.request, a = r.method, o = r.headers, s = r.url;
 	return { [Symbol.asyncIterator]: () => ({ async next() {
-		if (!url) return { done: true };
+		if (!s) return { done: !0 };
 		try {
-			const normalizedResponse = normalizePaginatedListResponse(await requestMethod({
-				method,
-				url,
-				headers
+			let e = rt(await i({
+				method: a,
+				url: s,
+				headers: o
 			}));
-			url = ((normalizedResponse.headers.link || "").match(/<([^<>]+)>;\s*rel="next"/) || [])[1];
-			if (!url && "total_commits" in normalizedResponse.data) {
-				const parsedUrl = new URL(normalizedResponse.url);
-				const params = parsedUrl.searchParams;
-				const page = parseInt(params.get("page") || "1", 10);
-				if (page * parseInt(params.get("per_page") || "250", 10) < normalizedResponse.data.total_commits) {
-					params.set("page", String(page + 1));
-					url = parsedUrl.toString();
-				}
+			if (s = ((e.headers.link || "").match(/<([^<>]+)>;\s*rel="next"/) || [])[1], !s && "total_commits" in e.data) {
+				let t = new URL(e.url), n = t.searchParams, r = parseInt(n.get("page") || "1", 10);
+				r * parseInt(n.get("per_page") || "250", 10) < e.data.total_commits && (n.set("page", String(r + 1)), s = t.toString());
 			}
-			return { value: normalizedResponse };
-		} catch (error) {
-			if (error.status !== 409) throw error;
-			url = "";
-			return { value: {
+			return { value: e };
+		} catch (e) {
+			if (e.status !== 409) throw e;
+			return s = "", { value: {
 				status: 200,
 				headers: {},
 				data: []
@@ -1038,36 +617,27 @@ function iterator(octokit, route, parameters) {
 		}
 	} }) };
 }
-function paginate(octokit, route, parameters, mapFn) {
-	if (typeof parameters === "function") {
-		mapFn = parameters;
-		parameters = void 0;
-	}
-	return gather(octokit, [], iterator(octokit, route, parameters)[Symbol.asyncIterator](), mapFn);
+function U(e, t, n, r) {
+	return typeof n == "function" && (r = n, n = void 0), W(e, [], H(e, t, n)[Symbol.asyncIterator](), r);
 }
-function gather(octokit, results, iterator2, mapFn) {
-	return iterator2.next().then((result) => {
-		if (result.done) return results;
-		let earlyExit = false;
-		function done() {
-			earlyExit = true;
+function W(e, t, n, r) {
+	return n.next().then((i) => {
+		if (i.done) return t;
+		let a = !1;
+		function o() {
+			a = !0;
 		}
-		results = results.concat(mapFn ? mapFn(result.value, done) : result.value.data);
-		if (earlyExit) return results;
-		return gather(octokit, results, iterator2, mapFn);
+		return t = t.concat(r ? r(i.value, o) : i.value.data), a ? t : W(e, t, n, r);
 	});
 }
-Object.assign(paginate, { iterator });
-function paginateRest(octokit) {
-	return { paginate: Object.assign(paginate.bind(null, octokit), { iterator: iterator.bind(null, octokit) }) };
+Object.assign(U, { iterator: H });
+function G(e) {
+	return { paginate: Object.assign(U.bind(null, e), { iterator: H.bind(null, e) }) };
 }
-paginateRest.VERSION = VERSION$2;
+G.VERSION = nt;
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
-var VERSION$1 = "17.0.0";
-//#endregion
-//#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/generated/endpoints.js
-var endpoints_default = {
+var K = "17.0.0", it = {
 	actions: {
 		addCustomLabelsToSelfHostedRunnerForOrg: ["POST /orgs/{org}/actions/runners/{runner_id}/labels"],
 		addCustomLabelsToSelfHostedRunnerForRepo: ["POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
@@ -2358,602 +1928,469 @@ var endpoints_default = {
 		unfollow: ["DELETE /user/following/{username}"],
 		updateAuthenticated: ["PATCH /user"]
 	}
-};
-//#endregion
-//#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/endpoints-to-methods.js
-var endpointMethodsMap = /* @__PURE__ */ new Map();
-for (const [scope, endpoints] of Object.entries(endpoints_default)) for (const [methodName, endpoint] of Object.entries(endpoints)) {
-	const [route, defaults, decorations] = endpoint;
-	const [method, url] = route.split(/ /);
-	const endpointDefaults = Object.assign({
-		method,
-		url
-	}, defaults);
-	if (!endpointMethodsMap.has(scope)) endpointMethodsMap.set(scope, /* @__PURE__ */ new Map());
-	endpointMethodsMap.get(scope).set(methodName, {
-		scope,
-		methodName,
-		endpointDefaults,
-		decorations
+}, q = /* @__PURE__ */ new Map();
+for (let [e, t] of Object.entries(it)) for (let [n, r] of Object.entries(t)) {
+	let [t, i, a] = r, [o, s] = t.split(/ /), c = Object.assign({
+		method: o,
+		url: s
+	}, i);
+	q.has(e) || q.set(e, /* @__PURE__ */ new Map()), q.get(e).set(n, {
+		scope: e,
+		methodName: n,
+		endpointDefaults: c,
+		decorations: a
 	});
 }
-var handler = {
-	has({ scope }, methodName) {
-		return endpointMethodsMap.get(scope).has(methodName);
+var at = {
+	has({ scope: e }, t) {
+		return q.get(e).has(t);
 	},
-	getOwnPropertyDescriptor(target, methodName) {
+	getOwnPropertyDescriptor(e, t) {
 		return {
-			value: this.get(target, methodName),
-			configurable: true,
-			writable: true,
-			enumerable: true
+			value: this.get(e, t),
+			configurable: !0,
+			writable: !0,
+			enumerable: !0
 		};
 	},
-	defineProperty(target, methodName, descriptor) {
-		Object.defineProperty(target.cache, methodName, descriptor);
-		return true;
+	defineProperty(e, t, n) {
+		return Object.defineProperty(e.cache, t, n), !0;
 	},
-	deleteProperty(target, methodName) {
-		delete target.cache[methodName];
-		return true;
+	deleteProperty(e, t) {
+		return delete e.cache[t], !0;
 	},
-	ownKeys({ scope }) {
-		return [...endpointMethodsMap.get(scope).keys()];
+	ownKeys({ scope: e }) {
+		return [...q.get(e).keys()];
 	},
-	set(target, methodName, value) {
-		return target.cache[methodName] = value;
+	set(e, t, n) {
+		return e.cache[t] = n;
 	},
-	get({ octokit, scope, cache }, methodName) {
-		if (cache[methodName]) return cache[methodName];
-		const method = endpointMethodsMap.get(scope).get(methodName);
-		if (!method) return;
-		const { endpointDefaults, decorations } = method;
-		if (decorations) cache[methodName] = decorate(octokit, scope, methodName, endpointDefaults, decorations);
-		else cache[methodName] = octokit.request.defaults(endpointDefaults);
-		return cache[methodName];
+	get({ octokit: e, scope: t, cache: n }, r) {
+		if (n[r]) return n[r];
+		let i = q.get(t).get(r);
+		if (!i) return;
+		let { endpointDefaults: a, decorations: o } = i;
+		return o ? n[r] = ot(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
 	}
 };
-function endpointsToMethods(octokit) {
-	const newMethods = {};
-	for (const scope of endpointMethodsMap.keys()) newMethods[scope] = new Proxy({
-		octokit,
-		scope,
+function J(e) {
+	let t = {};
+	for (let n of q.keys()) t[n] = new Proxy({
+		octokit: e,
+		scope: n,
 		cache: {}
-	}, handler);
-	return newMethods;
+	}, at);
+	return t;
 }
-function decorate(octokit, scope, methodName, defaults, decorations) {
-	const requestWithDefaults = octokit.request.defaults(defaults);
-	function withDecorations(...args) {
-		let options = requestWithDefaults.endpoint.merge(...args);
-		if (decorations.mapToData) {
-			options = Object.assign({}, options, {
-				data: options[decorations.mapToData],
-				[decorations.mapToData]: void 0
-			});
-			return requestWithDefaults(options);
+function ot(e, t, n, r, i) {
+	let a = e.request.defaults(r);
+	function o(...r) {
+		let o = a.endpoint.merge(...r);
+		if (i.mapToData) return o = Object.assign({}, o, {
+			data: o[i.mapToData],
+			[i.mapToData]: void 0
+		}), a(o);
+		if (i.renamed) {
+			let [r, a] = i.renamed;
+			e.log.warn(`octokit.${t}.${n}() has been renamed to octokit.${r}.${a}()`);
 		}
-		if (decorations.renamed) {
-			const [newScope, newMethodName] = decorations.renamed;
-			octokit.log.warn(`octokit.${scope}.${methodName}() has been renamed to octokit.${newScope}.${newMethodName}()`);
+		if (i.deprecated && e.log.warn(i.deprecated), i.renamedParameters) {
+			let o = a.endpoint.merge(...r);
+			for (let [r, a] of Object.entries(i.renamedParameters)) r in o && (e.log.warn(`"${r}" parameter is deprecated for "octokit.${t}.${n}()". Use "${a}" instead`), a in o || (o[a] = o[r]), delete o[r]);
+			return a(o);
 		}
-		if (decorations.deprecated) octokit.log.warn(decorations.deprecated);
-		if (decorations.renamedParameters) {
-			const options2 = requestWithDefaults.endpoint.merge(...args);
-			for (const [name, alias] of Object.entries(decorations.renamedParameters)) if (name in options2) {
-				octokit.log.warn(`"${name}" parameter is deprecated for "octokit.${scope}.${methodName}()". Use "${alias}" instead`);
-				if (!(alias in options2)) options2[alias] = options2[name];
-				delete options2[name];
-			}
-			return requestWithDefaults(options2);
-		}
-		return requestWithDefaults(...args);
+		return a(...r);
 	}
-	return Object.assign(withDecorations, requestWithDefaults);
+	return Object.assign(o, a);
 }
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
-function restEndpointMethods(octokit) {
-	return { rest: endpointsToMethods(octokit) };
+function st(e) {
+	return { rest: J(e) };
 }
-restEndpointMethods.VERSION = VERSION$1;
-function legacyRestEndpointMethods(octokit) {
-	const api = endpointsToMethods(octokit);
+st.VERSION = K;
+function ct(e) {
+	let t = J(e);
 	return {
-		...api,
-		rest: api
+		...t,
+		rest: t
 	};
 }
-legacyRestEndpointMethods.VERSION = VERSION$1;
+ct.VERSION = K;
 //#endregion
 //#region node_modules/@octokit/rest/dist-src/index.js
-var Octokit = Octokit$1.plugin(requestLog, legacyRestEndpointMethods, paginateRest).defaults({ userAgent: `octokit-rest.js/22.0.1` });
+var lt = et.plugin(V, ct, G).defaults({ userAgent: "octokit-rest.js/22.0.1" });
 //#endregion
 //#region electron/engine/nodeRegistry.ts
-function resolveVariables(text, context) {
-	if (typeof text !== "string") return text;
-	return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, expression) => {
-		const parts = expression.trim().split(".");
-		const source = parts[0];
-		if (source === "globals") {
-			const key = parts[1];
-			return context.credentials[key] || "";
+function Y(e, t) {
+	return typeof e == "string" ? e.replace(/\{\{\s*([^}]+)\s*\}\}/g, (e, n) => {
+		let r = n.trim().split("."), i = r[0];
+		if (i === "globals") {
+			let e = r[1];
+			return t.credentials[e] || "";
 		}
-		const output = context.nodeOutputs[source];
-		if (!output) return "";
-		let current = output;
-		for (let i = 1; i < parts.length; i++) if (current && typeof current === "object") current = current[parts[i]];
+		let a = t.nodeOutputs[i];
+		if (!a) return "";
+		let o = a;
+		for (let e = 1; e < r.length; e++) if (o && typeof o == "object") o = o[r[e]];
 		else return "";
-		if (typeof current === "object") return JSON.stringify(current);
-		return current !== void 0 ? String(current) : "";
-	});
+		return typeof o == "object" ? JSON.stringify(o) : o === void 0 ? "" : String(o);
+	}) : e;
 }
-var nodeExecutors = {
-	trigger: async (node, context) => {
-		context.log(node.id, "Workflow triggered manually", "success");
-		return {
-			triggered: true,
-			timestamp: (/* @__PURE__ */ new Date()).toISOString()
-		};
-	},
-	terminal: async (node, context) => {
-		const command = resolveVariables(node.data.command || "", context);
-		const cwd = resolveVariables(node.data.cwd || "", context) || process.cwd();
-		context.log(node.id, `Executing command: ${command} in ${cwd}`, "info");
-		return new Promise((resolve, reject) => {
-			exec(command, { cwd }, (error, stdout, stderr) => {
-				if (stdout) context.log(node.id, stdout, "info");
-				if (stderr) context.log(node.id, stderr, "warn");
-				if (error) {
-					context.log(node.id, `Command failed: ${error.message}`, "error");
-					reject({
-						error: error.message,
-						stdout,
-						stderr,
-						exitCode: error.code
-					});
-				} else {
-					context.log(node.id, `Command completed successfully`, "success");
-					resolve({
-						stdout: stdout.trim(),
-						stderr: stderr.trim(),
-						exitCode: 0
-					});
-				}
+var ut = {
+	trigger: async (e, t) => (t.log(e.id, "Workflow triggered manually", "success"), {
+		triggered: !0,
+		timestamp: (/* @__PURE__ */ new Date()).toISOString()
+	}),
+	terminal: async (e, t) => {
+		let n = Y(e.data.command || "", t), r = Y(e.data.cwd || "", t) || process.cwd();
+		return t.log(e.id, `Executing command: ${n} in ${r}`, "info"), new Promise((i, a) => {
+			l(n, { cwd: r }, (n, r, o) => {
+				r && t.log(e.id, r, "info"), o && t.log(e.id, o, "warn"), n ? (t.log(e.id, `Command failed: ${n.message}`, "error"), a({
+					error: n.message,
+					stdout: r,
+					stderr: o,
+					exitCode: n.code
+				})) : (t.log(e.id, "Command completed successfully", "success"), i({
+					stdout: r.trim(),
+					stderr: o.trim(),
+					exitCode: 0
+				}));
 			});
 		});
 	},
-	git: async (node, context) => {
-		const operation = node.data.operation;
-		const cwd = resolveVariables(node.data.cwd || "", context) || process.cwd();
-		const runGitCommand = (cmd) => {
-			return new Promise((resolve, reject) => {
-				exec(cmd, { cwd }, (error, stdout, stderr) => {
-					if (error) reject(new Error(stderr || error.message));
-					else resolve(stdout.trim());
-				});
+	git: async (e, t) => {
+		let n = e.data.operation, r = Y(e.data.cwd || "", t) || process.cwd(), i = (e) => new Promise((t, n) => {
+			l(e, { cwd: r }, (e, r, i) => {
+				e ? n(Error(i || e.message)) : t(r.trim());
 			});
-		};
-		context.log(node.id, `Starting Git Operation: ${operation}`, "info");
+		});
+		t.log(e.id, `Starting Git Operation: ${n}`, "info");
 		try {
-			if (operation === "branch") {
-				const branchName = resolveVariables(node.data.branchName || "", context);
-				if (!branchName) throw new Error("Branch name is required");
-				context.log(node.id, `Creating and switching to branch: ${branchName}`, "info");
+			if (n === "branch") {
+				let n = Y(e.data.branchName || "", t);
+				if (!n) throw Error("Branch name is required");
+				t.log(e.id, `Creating and switching to branch: ${n}`, "info");
 				try {
-					await runGitCommand(`git checkout ${branchName}`);
-					context.log(node.id, `Switched to existing branch: ${branchName}`, "success");
+					await i(`git checkout ${n}`), t.log(e.id, `Switched to existing branch: ${n}`, "success");
 				} catch {
-					await runGitCommand(`git checkout -b ${branchName}`);
-					context.log(node.id, `Created and switched to branch: ${branchName}`, "success");
+					await i(`git checkout -b ${n}`), t.log(e.id, `Created and switched to branch: ${n}`, "success");
 				}
 				return {
-					branchName,
-					success: true
+					branchName: n,
+					success: !0
 				};
-			} else if (operation === "commit") {
-				const message = resolveVariables(node.data.commitMessage || "", context) || "Commit from DevFlow";
-				context.log(node.id, `Staging files and committing with message: "${message}"`, "info");
-				await runGitCommand("git add .");
-				const result = await runGitCommand(`git commit -m "${message.replace(/"/g, "\\\"")}"`);
-				context.log(node.id, `Committed successfully: ${result}`, "success");
-				return {
-					commitResult: result,
-					success: true
+			} else if (n === "commit") {
+				let n = Y(e.data.commitMessage || "", t) || "Commit from DevFlow";
+				t.log(e.id, `Staging files and committing with message: "${n}"`, "info"), await i("git add .");
+				let r = await i(`git commit -m "${n.replace(/"/g, "\\\"")}"`);
+				return t.log(e.id, `Committed successfully: ${r}`, "success"), {
+					commitResult: r,
+					success: !0
 				};
-			} else if (operation === "cherry-pick") {
-				const commitHash = resolveVariables(node.data.commitHash || "", context);
-				if (!commitHash) throw new Error("Commit hash is required");
-				context.log(node.id, `Cherry picking commit: ${commitHash}`, "info");
-				const result = await runGitCommand(`git cherry-pick ${commitHash}`);
-				context.log(node.id, `Cherry pick successful`, "success");
-				return {
-					cherryPickResult: result,
-					success: true
+			} else if (n === "cherry-pick") {
+				let n = Y(e.data.commitHash || "", t);
+				if (!n) throw Error("Commit hash is required");
+				t.log(e.id, `Cherry picking commit: ${n}`, "info");
+				let r = await i(`git cherry-pick ${n}`);
+				return t.log(e.id, "Cherry pick successful", "success"), {
+					cherryPickResult: r,
+					success: !0
 				};
-			} else if (operation === "push") {
-				const remote = resolveVariables(node.data.remote || "", context) || "origin";
-				const branch = resolveVariables(node.data.branchName || "", context);
-				if (!branch) throw new Error("Branch name is required to push");
-				context.log(node.id, `Pushing branch ${branch} to ${remote}`, "info");
-				const result = await runGitCommand(`git push ${remote} ${branch}`);
-				context.log(node.id, `Push completed`, "success");
-				return {
-					pushResult: result,
-					success: true
+			} else if (n === "push") {
+				let n = Y(e.data.remote || "", t) || "origin", r = Y(e.data.branchName || "", t);
+				if (!r) throw Error("Branch name is required to push");
+				t.log(e.id, `Pushing branch ${r} to ${n}`, "info");
+				let a = await i(`git push ${n} ${r}`);
+				return t.log(e.id, "Push completed", "success"), {
+					pushResult: a,
+					success: !0
 				};
 			}
-			throw new Error(`Unsupported Git operation: ${operation}`);
-		} catch (err) {
-			context.log(node.id, `Git operation failed: ${err.message}`, "error");
-			throw err;
+			throw Error(`Unsupported Git operation: ${n}`);
+		} catch (n) {
+			throw t.log(e.id, `Git operation failed: ${n.message}`, "error"), n;
 		}
 	},
-	github: async (node, context) => {
-		const operation = node.data.operation;
-		const githubToken = context.credentials.githubToken;
-		if (!githubToken) throw new Error("GitHub Personal Access Token (githubToken) is missing in credentials settings.");
-		const octokit = new Octokit({ auth: githubToken });
-		const owner = resolveVariables(node.data.owner || "", context);
-		const repo = resolveVariables(node.data.repo || "", context);
-		context.log(node.id, `Starting GitHub Operation: ${operation} on ${owner}/${repo}`, "info");
+	github: async (e, t) => {
+		let n = e.data.operation, r = t.credentials.githubToken;
+		if (!r) throw Error("GitHub Personal Access Token (githubToken) is missing in credentials settings.");
+		let i = new lt({ auth: r }), a = Y(e.data.owner || "", t), o = Y(e.data.repo || "", t);
+		t.log(e.id, `Starting GitHub Operation: ${n} on ${a}/${o}`, "info");
 		try {
-			if (operation === "create-pr") {
-				const title = resolveVariables(node.data.prTitle || "", context);
-				const head = resolveVariables(node.data.headBranch || "", context);
-				const base = resolveVariables(node.data.baseBranch || "", context) || "main";
-				const body = resolveVariables(node.data.prBody || "", context) || "Automated PR by DevFlow";
-				context.log(node.id, `Creating PR from ${head} to ${base}...`, "info");
-				const response = await octokit.pulls.create({
-					owner,
-					repo,
-					title,
-					head,
-					base,
-					body,
-					draft: true
+			if (n === "create-pr") {
+				let n = Y(e.data.prTitle || "", t), r = Y(e.data.headBranch || "", t), s = Y(e.data.baseBranch || "", t) || "main", c = Y(e.data.prBody || "", t) || "Automated PR by DevFlow";
+				t.log(e.id, `Creating PR from ${r} to ${s}...`, "info");
+				let l = await i.pulls.create({
+					owner: a,
+					repo: o,
+					title: n,
+					head: r,
+					base: s,
+					body: c,
+					draft: !0
 				});
-				context.log(node.id, `PR created successfully: ${response.data.html_url}`, "success");
-				return {
-					prNumber: response.data.number,
-					prUrl: response.data.html_url,
-					success: true
+				return t.log(e.id, `PR created successfully: ${l.data.html_url}`, "success"), {
+					prNumber: l.data.number,
+					prUrl: l.data.html_url,
+					success: !0
 				};
-			} else if (operation === "pr-comment") {
-				const prNumberStr = resolveVariables(node.data.prNumber || "", context);
-				const prNumber = parseInt(prNumberStr, 10);
-				const body = resolveVariables(node.data.commentBody || "", context);
-				if (isNaN(prNumber)) throw new Error("Valid PR number is required");
-				if (!body) throw new Error("Comment body is required");
-				context.log(node.id, `Adding comment to PR #${prNumber}...`, "info");
-				const response = await octokit.issues.createComment({
-					owner,
-					repo,
-					issue_number: prNumber,
-					body
+			} else if (n === "pr-comment") {
+				let n = Y(e.data.prNumber || "", t), r = parseInt(n, 10), s = Y(e.data.commentBody || "", t);
+				if (isNaN(r)) throw Error("Valid PR number is required");
+				if (!s) throw Error("Comment body is required");
+				t.log(e.id, `Adding comment to PR #${r}...`, "info");
+				let c = await i.issues.createComment({
+					owner: a,
+					repo: o,
+					issue_number: r,
+					body: s
 				});
-				context.log(node.id, `Comment added: ${response.data.html_url}`, "success");
-				return {
-					commentUrl: response.data.html_url,
-					success: true
+				return t.log(e.id, `Comment added: ${c.data.html_url}`, "success"), {
+					commentUrl: c.data.html_url,
+					success: !0
 				};
 			}
-			throw new Error(`Unsupported GitHub operation: ${operation}`);
-		} catch (err) {
-			context.log(node.id, `GitHub operation failed: ${err.message}`, "error");
-			throw err;
+			throw Error(`Unsupported GitHub operation: ${n}`);
+		} catch (n) {
+			throw t.log(e.id, `GitHub operation failed: ${n.message}`, "error"), n;
 		}
 	},
-	jira: async (node, context) => {
-		const operation = node.data.operation;
-		const jiraHost = context.credentials.jiraHost;
-		const jiraEmail = context.credentials.jiraEmail;
-		const jiraToken = context.credentials.jiraToken;
-		if (!jiraHost || !jiraEmail || !jiraToken) throw new Error("Jira credentials (jiraHost, jiraEmail, jiraToken) are incomplete in settings.");
-		const issueKey = resolveVariables(node.data.issueKey || "", context);
-		if (!issueKey) throw new Error("Jira Issue Key (e.g. PROJ-123) is required");
-		const authHeader = `Basic ${Buffer.from(`${jiraEmail}:${jiraToken}`).toString("base64")}`;
-		const baseUrl = `https://${jiraHost.replace(/^https?:\/\//, "")}/rest/api/3`;
-		context.log(node.id, `Starting Jira Operation: ${operation} for ${issueKey}`, "info");
+	jira: async (e, t) => {
+		let n = e.data.operation, r = t.credentials.jiraHost, i = t.credentials.jiraEmail, a = t.credentials.jiraToken;
+		if (!r || !i || !a) throw Error("Jira credentials (jiraHost, jiraEmail, jiraToken) are incomplete in settings.");
+		let o = Y(e.data.issueKey || "", t);
+		if (!o) throw Error("Jira Issue Key (e.g. PROJ-123) is required");
+		let s = `Basic ${Buffer.from(`${i}:${a}`).toString("base64")}`, c = `https://${r.replace(/^https?:\/\//, "")}/rest/api/3`;
+		t.log(e.id, `Starting Jira Operation: ${n} for ${o}`, "info");
 		try {
-			if (operation === "comment") {
-				const commentText = resolveVariables(node.data.comment || "", context);
-				if (!commentText) throw new Error("Comment text is required");
-				context.log(node.id, `Adding comment to Jira ticket ${issueKey}...`, "info");
-				const commentBody = { body: {
+			if (n === "comment") {
+				let n = Y(e.data.comment || "", t);
+				if (!n) throw Error("Comment text is required");
+				t.log(e.id, `Adding comment to Jira ticket ${o}...`, "info");
+				let r = { body: {
 					version: 1,
 					type: "doc",
 					content: [{
 						type: "paragraph",
 						content: [{
 							type: "text",
-							text: commentText
+							text: n
 						}]
 					}]
-				} };
-				const res = await fetch(`${baseUrl}/issue/${issueKey}/comment`, {
+				} }, i = await fetch(`${c}/issue/${o}/comment`, {
 					method: "POST",
 					headers: {
-						"Authorization": authHeader,
+						Authorization: s,
 						"Content-Type": "application/json",
-						"Accept": "application/json"
+						Accept: "application/json"
 					},
-					body: JSON.stringify(commentBody)
+					body: JSON.stringify(r)
 				});
-				if (!res.ok) {
-					const errMsg = await res.text();
-					throw new Error(`Jira API error ${res.status}: ${errMsg}`);
+				if (!i.ok) {
+					let e = await i.text();
+					throw Error(`Jira API error ${i.status}: ${e}`);
 				}
-				const data = await res.json();
-				context.log(node.id, `Jira comment added successfully`, "success");
-				return {
-					commentId: data.id,
-					success: true
+				let a = await i.json();
+				return t.log(e.id, "Jira comment added successfully", "success"), {
+					commentId: a.id,
+					success: !0
 				};
-			} else if (operation === "transition") {
-				const transitionName = resolveVariables(node.data.transitionName || "", context);
-				if (!transitionName) throw new Error("Transition target is required");
-				context.log(node.id, `Fetching transitions for ${issueKey}...`, "info");
-				const getRes = await fetch(`${baseUrl}/issue/${issueKey}/transitions`, { headers: { "Authorization": authHeader } });
-				if (!getRes.ok) throw new Error(`Failed to fetch transitions: ${getRes.statusText}`);
-				const transData = await getRes.json();
-				const foundTransition = transData.transitions.find((t) => t.name.toLowerCase() === transitionName.toLowerCase() || t.id === transitionName);
-				if (!foundTransition) throw new Error(`Jira transition "${transitionName}" not found on issue ${issueKey}. Available: ${transData.transitions.map((t) => t.name).join(", ")}`);
-				context.log(node.id, `Executing transition to status: ${foundTransition.name} (ID: ${foundTransition.id})`, "info");
-				const postRes = await fetch(`${baseUrl}/issue/${issueKey}/transitions`, {
+			} else if (n === "transition") {
+				let n = Y(e.data.transitionName || "", t);
+				if (!n) throw Error("Transition target is required");
+				t.log(e.id, `Fetching transitions for ${o}...`, "info");
+				let r = await fetch(`${c}/issue/${o}/transitions`, { headers: { Authorization: s } });
+				if (!r.ok) throw Error(`Failed to fetch transitions: ${r.statusText}`);
+				let i = await r.json(), a = i.transitions.find((e) => e.name.toLowerCase() === n.toLowerCase() || e.id === n);
+				if (!a) throw Error(`Jira transition "${n}" not found on issue ${o}. Available: ${i.transitions.map((e) => e.name).join(", ")}`);
+				t.log(e.id, `Executing transition to status: ${a.name} (ID: ${a.id})`, "info");
+				let l = await fetch(`${c}/issue/${o}/transitions`, {
 					method: "POST",
 					headers: {
-						"Authorization": authHeader,
+						Authorization: s,
 						"Content-Type": "application/json"
 					},
-					body: JSON.stringify({ transition: { id: foundTransition.id } })
+					body: JSON.stringify({ transition: { id: a.id } })
 				});
-				if (!postRes.ok) {
-					const errMsg = await postRes.text();
-					throw new Error(`Failed to apply transition: ${errMsg}`);
+				if (!l.ok) {
+					let e = await l.text();
+					throw Error(`Failed to apply transition: ${e}`);
 				}
-				context.log(node.id, `Jira issue transitioned successfully to "${foundTransition.name}"`, "success");
-				return {
-					transitionedTo: foundTransition.name,
-					success: true
+				return t.log(e.id, `Jira issue transitioned successfully to "${a.name}"`, "success"), {
+					transitionedTo: a.name,
+					success: !0
 				};
 			}
-			throw new Error(`Unsupported Jira operation: ${operation}`);
-		} catch (err) {
-			context.log(node.id, `Jira operation failed: ${err.message}`, "error");
-			throw err;
+			throw Error(`Unsupported Jira operation: ${n}`);
+		} catch (n) {
+			throw t.log(e.id, `Jira operation failed: ${n.message}`, "error"), n;
 		}
 	},
-	mcp: async (node, context) => {
-		const serverCmd = resolveVariables(node.data.serverCmd || "", context);
-		const serverArgsStr = resolveVariables(node.data.serverArgs || "", context);
-		const toolName = resolveVariables(node.data.toolName || "", context);
-		const toolArgsStr = resolveVariables(node.data.toolArgs || "", context) || "{}";
-		if (!serverCmd) throw new Error("MCP server command (e.g. npx) is required");
-		if (!toolName) throw new Error("MCP Tool Name is required");
-		const serverArgs = serverArgsStr ? serverArgsStr.split(" ").filter(Boolean) : [];
-		const toolArgs = JSON.parse(toolArgsStr);
-		context.log(node.id, `Starting MCP Connection to Server: "${serverCmd} ${serverArgs.join(" ")}"`, "info");
-		context.log(node.id, `Calling tool: "${toolName}" with args: ${JSON.stringify(toolArgs)}`, "info");
-		return new Promise((resolve, reject) => {
-			const mcpProcess = exec(`${serverCmd} ${serverArgs.join(" ")}`);
-			let stdoutBuffer = "";
-			let resolved = false;
-			mcpProcess.stdout?.on("data", (data) => {
-				stdoutBuffer += data;
-				const lines = stdoutBuffer.split("\n");
-				for (let i = 0; i < lines.length - 1; i++) {
-					const line = lines[i].trim();
-					if (!line) continue;
-					try {
-						const parsed = JSON.parse(line);
-						if (parsed.id === 1 && (parsed.result || parsed.error)) {
-							resolved = true;
-							mcpProcess.kill();
-							if (parsed.error) {
-								context.log(node.id, `MCP Tool execution failed: ${parsed.error.message}`, "error");
-								reject(new Error(parsed.error.message));
-							} else {
-								context.log(node.id, `MCP Tool execution succeeded`, "success");
-								resolve(parsed.result);
-							}
+	mcp: async (e, t) => {
+		let n = Y(e.data.serverCmd || "", t), r = Y(e.data.serverArgs || "", t), i = Y(e.data.toolName || "", t), a = Y(e.data.toolArgs || "", t) || "{}";
+		if (!n) throw Error("MCP server command (e.g. npx) is required");
+		if (!i) throw Error("MCP Tool Name is required");
+		let o = r ? r.split(" ").filter(Boolean) : [], s = JSON.parse(a);
+		return t.log(e.id, `Starting MCP Connection to Server: "${n} ${o.join(" ")}"`, "info"), t.log(e.id, `Calling tool: "${i}" with args: ${JSON.stringify(s)}`, "info"), new Promise((r, a) => {
+			let c = l(`${n} ${o.join(" ")}`), u = "", d = !1;
+			c.stdout?.on("data", (n) => {
+				u += n;
+				let i = u.split("\n");
+				for (let n = 0; n < i.length - 1; n++) {
+					let o = i[n].trim();
+					if (o) try {
+						let n = JSON.parse(o);
+						if (n.id === 1 && (n.result || n.error)) {
+							d = !0, c.kill(), n.error ? (t.log(e.id, `MCP Tool execution failed: ${n.error.message}`, "error"), a(Error(n.error.message))) : (t.log(e.id, "MCP Tool execution succeeded", "success"), r(n.result));
 							break;
 						}
 					} catch {}
 				}
-				stdoutBuffer = lines[lines.length - 1];
+				u = i[i.length - 1];
+			}), c.stderr?.on("data", (n) => {
+				t.log(e.id, `[MCP Server Log] ${n}`, "warn");
+			}), c.on("close", (e) => {
+				d || a(/* @__PURE__ */ Error(`MCP server closed prematurely with code ${e}`));
 			});
-			mcpProcess.stderr?.on("data", (data) => {
-				context.log(node.id, `[MCP Server Log] ${data}`, "warn");
-			});
-			mcpProcess.on("close", (code) => {
-				if (!resolved) reject(/* @__PURE__ */ new Error(`MCP server closed prematurely with code ${code}`));
-			});
-			const jsonRpcRequest = {
+			let f = {
 				jsonrpc: "2.0",
 				id: 1,
 				method: "tools/call",
 				params: {
-					name: toolName,
-					arguments: toolArgs
+					name: i,
+					arguments: s
 				}
 			};
-			context.log(node.id, `Sending JSON-RPC request to MCP stdin`, "info");
-			mcpProcess.stdin?.write(JSON.stringify(jsonRpcRequest) + "\n");
+			t.log(e.id, "Sending JSON-RPC request to MCP stdin", "info"), c.stdin?.write(JSON.stringify(f) + "\n");
 		});
 	},
-	javascript: async (node, context) => {
-		const code = node.data.code || "";
-		context.log(node.id, `Running custom JavaScript code`, "info");
+	javascript: async (e, t) => {
+		let n = e.data.code || "";
+		t.log(e.id, "Running custom JavaScript code", "info");
 		try {
-			const inputs = context.nodeOutputs;
-			const sandbox = {
-				inputs,
-				console: { log: (msg) => context.log(node.id, `[Console] ${String(msg)}`, "info") }
-			};
-			const result = new Function("inputs", "console", `
-        ${code}
-      `)(inputs, sandbox.console);
-			context.log(node.id, `Code executed successfully`, "success");
-			return result || { success: true };
-		} catch (err) {
-			context.log(node.id, `Code execution failed: ${err.message}`, "error");
-			throw err;
+			let r = t.nodeOutputs, i = {
+				inputs: r,
+				console: { log: (n) => t.log(e.id, `[Console] ${String(n)}`, "info") }
+			}, a = Function("inputs", "console", `
+        ${n}
+      `)(r, i.console);
+			return t.log(e.id, "Code executed successfully", "success"), a || { success: !0 };
+		} catch (n) {
+			throw t.log(e.id, `Code execution failed: ${n.message}`, "error"), n;
 		}
 	}
-};
-//#endregion
-//#region electron/engine/executor.ts
-var WorkflowExecutor = class {
-	isCancelled = false;
+}, dt = class {
+	isCancelled = !1;
 	activeNodeId = null;
 	window;
-	constructor(window) {
-		this.window = window;
+	constructor(e) {
+		this.window = e;
 	}
 	cancel() {
-		this.isCancelled = true;
-		if (this.activeNodeId) this.log(this.activeNodeId, "Workflow execution cancelled by user", "error");
+		this.isCancelled = !0, this.activeNodeId && this.log(this.activeNodeId, "Workflow execution cancelled by user", "error");
 	}
-	log(nodeId, message, type = "info") {
+	log(e, t, n = "info") {
 		this.window.webContents.send("workflow-log", {
-			nodeId,
-			message,
-			type,
+			nodeId: e,
+			message: t,
+			type: n,
 			timestamp: (/* @__PURE__ */ new Date()).toISOString()
 		});
 	}
-	updateStatus(nodeId, status, output, error) {
+	updateStatus(e, t, n, r) {
 		this.window.webContents.send("workflow-status", {
-			nodeId,
-			status,
-			output,
-			error
+			nodeId: e,
+			status: t,
+			output: n,
+			error: r
 		});
 	}
-	async execute(workflow, credentials) {
-		this.isCancelled = false;
-		this.activeNodeId = null;
-		const nodes = workflow.nodes;
-		const edges = workflow.edges;
-		const adjList = {};
-		const inDegree = {};
-		nodes.forEach((node) => {
-			adjList[node.id] = [];
-			inDegree[node.id] = 0;
-			this.updateStatus(node.id, "idle");
+	async execute(e, t) {
+		this.isCancelled = !1, this.activeNodeId = null;
+		let n = e.nodes, r = e.edges, i = {}, a = {};
+		n.forEach((e) => {
+			i[e.id] = [], a[e.id] = 0, this.updateStatus(e.id, "idle");
+		}), r.forEach((e) => {
+			i[e.source] && i[e.source].push(e.target), a[e.target] !== void 0 && a[e.target]++;
 		});
-		edges.forEach((edge) => {
-			if (adjList[edge.source]) adjList[edge.source].push(edge.target);
-			if (inDegree[edge.target] !== void 0) inDegree[edge.target]++;
-		});
-		const queue = [];
-		const triggers = nodes.filter((n) => n.type === "trigger");
-		if (triggers.length > 0) triggers.forEach((t) => queue.push(t.id));
-		else nodes.forEach((node) => {
-			if (inDegree[node.id] === 0) queue.push(node.id);
-		});
-		if (queue.length === 0 && nodes.length > 0) {
-			this.window.webContents.send("workflow-log", {
-				nodeId: "system",
-				message: "No entry point (trigger or 0-indegree node) found in workflow.",
-				type: "error",
-				timestamp: (/* @__PURE__ */ new Date()).toISOString()
-			});
-			return {
-				success: false,
-				error: "No entry point"
-			};
-		}
-		const nodeOutputs = {};
-		const executionContext = {
-			nodeOutputs,
-			credentials,
-			log: (nodeId, message, type) => this.log(nodeId, message, type)
+		let o = [], s = n.filter((e) => e.type === "trigger");
+		if (s.length > 0 ? s.forEach((e) => o.push(e.id)) : n.forEach((e) => {
+			a[e.id] === 0 && o.push(e.id);
+		}), o.length === 0 && n.length > 0) return this.window.webContents.send("workflow-log", {
+			nodeId: "system",
+			message: "No entry point (trigger or 0-indegree node) found in workflow.",
+			type: "error",
+			timestamp: (/* @__PURE__ */ new Date()).toISOString()
+		}), {
+			success: !1,
+			error: "No entry point"
 		};
-		const processedNodes = /* @__PURE__ */ new Set();
-		this.window.webContents.send("workflow-log", {
+		let c = {}, l = {
+			nodeOutputs: c,
+			credentials: t,
+			log: (e, t, n) => this.log(e, t, n)
+		}, u = /* @__PURE__ */ new Set();
+		for (this.window.webContents.send("workflow-log", {
 			nodeId: "system",
 			message: "Starting workflow execution...",
 			type: "info",
 			timestamp: (/* @__PURE__ */ new Date()).toISOString()
-		});
-		while (queue.length > 0) {
-			if (this.isCancelled) {
-				this.window.webContents.send("workflow-log", {
-					nodeId: "system",
-					message: "Workflow execution aborted.",
-					type: "error",
-					timestamp: (/* @__PURE__ */ new Date()).toISOString()
-				});
-				return {
-					success: false,
-					cancelled: true
-				};
-			}
-			const currentId = queue.shift();
-			const currentNode = nodes.find((n) => n.id === currentId);
-			if (!currentNode) continue;
-			this.activeNodeId = currentId;
-			this.updateStatus(currentId, "running");
-			this.log(currentId, `Executing node: ${currentNode.data.label || currentNode.type}`, "info");
-			try {
-				const executor = nodeExecutors[currentNode.type];
-				if (!executor) throw new Error(`Executor for node type "${currentNode.type}" not found.`);
-				const output = await executor(currentNode, executionContext);
-				nodeOutputs[currentNode.id] = output;
-				const cleanName = (currentNode.data.label || "").replace(/[^a-zA-Z0-9]/g, "");
-				if (cleanName) nodeOutputs[cleanName] = output;
-				this.updateStatus(currentId, "success", output);
-				processedNodes.add(currentId);
-				adjList[currentId].forEach((neighborId) => {
-					inDegree[neighborId]--;
-					if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) queue.push(neighborId);
-				});
-			} catch (err) {
-				this.updateStatus(currentId, "error", null, err.message);
-				this.log(currentId, `Failed executing node: ${err.message}`, "error");
-				this.window.webContents.send("workflow-log", {
-					nodeId: "system",
-					message: `Workflow halted due to error in node "${currentNode.data.label || currentNode.type}"`,
-					type: "error",
-					timestamp: (/* @__PURE__ */ new Date()).toISOString()
-				});
-				return {
-					success: false,
-					error: err.message
-				};
+		}); o.length > 0;) {
+			if (this.isCancelled) return this.window.webContents.send("workflow-log", {
+				nodeId: "system",
+				message: "Workflow execution aborted.",
+				type: "error",
+				timestamp: (/* @__PURE__ */ new Date()).toISOString()
+			}), {
+				success: !1,
+				cancelled: !0
+			};
+			let e = o.shift(), t = n.find((t) => t.id === e);
+			if (t) {
+				this.activeNodeId = e, this.updateStatus(e, "running"), this.log(e, `Executing node: ${t.data.label || t.type}`, "info");
+				try {
+					let n = ut[t.type];
+					if (!n) throw Error(`Executor for node type "${t.type}" not found.`);
+					let r = await n(t, l);
+					c[t.id] = r;
+					let s = (t.data.label || "").replace(/[^a-zA-Z0-9]/g, "");
+					s && (c[s] = r), this.updateStatus(e, "success", r), u.add(e), i[e].forEach((e) => {
+						a[e]--, a[e] === 0 && !u.has(e) && o.push(e);
+					});
+				} catch (n) {
+					return this.updateStatus(e, "error", null, n.message), this.log(e, `Failed executing node: ${n.message}`, "error"), this.window.webContents.send("workflow-log", {
+						nodeId: "system",
+						message: `Workflow halted due to error in node "${t.data.label || t.type}"`,
+						type: "error",
+						timestamp: (/* @__PURE__ */ new Date()).toISOString()
+					}), {
+						success: !1,
+						error: n.message
+					};
+				}
 			}
 		}
-		this.activeNodeId = null;
-		this.window.webContents.send("workflow-log", {
+		return this.activeNodeId = null, this.window.webContents.send("workflow-log", {
 			nodeId: "system",
 			message: "Workflow execution completed successfully.",
 			type: "success",
 			timestamp: (/* @__PURE__ */ new Date()).toISOString()
-		});
-		return {
-			success: true,
-			outputs: nodeOutputs
+		}), {
+			success: !0,
+			outputs: c
 		};
 	}
-};
-//#endregion
-//#region electron/main.ts
-var __dirname = path.dirname(fileURLToPath(import.meta.url));
-var mainWindow = null;
-var activeExecutor = null;
-var WORKFLOWS_DIR = path.join(app.getPath("userData"), "workflows");
-var CREDENTIALS_FILE = path.join(app.getPath("userData"), "credentials.enc");
-if (!existsSync(WORKFLOWS_DIR)) mkdirSync(WORKFLOWS_DIR, { recursive: true });
-async function createWindow() {
-	mainWindow = new BrowserWindow({
+}, ft = i.dirname(c(import.meta.url)), X = null, Z = null, Q = i.join(t.getPath("userData"), "workflows"), $ = i.join(t.getPath("userData"), "credentials.enc");
+o(Q) || s(Q, { recursive: !0 });
+async function pt() {
+	X = new e({
 		width: 1280,
 		height: 800,
 		webPreferences: {
-			preload: path.join(__dirname, "preload.js"),
-			nodeIntegration: false,
-			contextIsolation: true
+			preload: i.join(ft, "preload.js"),
+			nodeIntegration: !1,
+			contextIsolation: !0
 		},
 		titleBarStyle: "hidden",
 		titleBarOverlay: {
@@ -2962,104 +2399,75 @@ async function createWindow() {
 			height: 35
 		},
 		backgroundColor: "#09090b"
-	});
-	if (process.env.VITE_DEV_SERVER_URL) {
-		mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-		mainWindow.webContents.openDevTools();
-	} else mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+	}), process.env.VITE_DEV_SERVER_URL ? (X.loadURL(process.env.VITE_DEV_SERVER_URL), X.webContents.openDevTools()) : X.loadFile(i.join(ft, "../dist/index.html"));
 }
-app.whenReady().then(() => {
-	createWindow();
-	app.on("activate", () => {
-		if (BrowserWindow.getAllWindows().length === 0) createWindow();
+t.whenReady().then(() => {
+	pt(), t.on("activate", () => {
+		e.getAllWindows().length === 0 && pt();
 	});
-});
-app.on("window-all-closed", () => {
-	if (process.platform !== "darwin") app.quit();
-});
-ipcMain.handle("save-workflow", async (_, name, data) => {
-	const filePath = path.join(WORKFLOWS_DIR, `${name}.json`);
-	await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
-	return { success: true };
-});
-ipcMain.handle("load-workflow", async (_, name) => {
-	const filePath = path.join(WORKFLOWS_DIR, `${name}.json`);
-	const content = await fs.readFile(filePath, "utf-8");
-	return JSON.parse(content);
-});
-ipcMain.handle("list-workflows", async () => {
-	const files = await fs.readdir(WORKFLOWS_DIR);
-	const workflows = [];
-	for (const file of files) if (file.endsWith(".json")) workflows.push(path.basename(file, ".json"));
-	return workflows;
-});
-ipcMain.handle("delete-workflow", async (_, name) => {
-	const filePath = path.join(WORKFLOWS_DIR, `${name}.json`);
-	await fs.unlink(filePath);
-	return { success: true };
-});
-ipcMain.handle("run-workflow", async (_, workflow) => {
-	if (!mainWindow) return {
-		success: false,
+}), t.on("window-all-closed", () => {
+	process.platform !== "darwin" && t.quit();
+}), n.handle("save-workflow", async (e, t, n) => {
+	let r = i.join(Q, `${t}.json`);
+	return await a.writeFile(r, JSON.stringify(n, null, 2), "utf-8"), { success: !0 };
+}), n.handle("load-workflow", async (e, t) => {
+	let n = i.join(Q, `${t}.json`), r = await a.readFile(n, "utf-8");
+	return JSON.parse(r);
+}), n.handle("list-workflows", async () => {
+	let e = await a.readdir(Q), t = [];
+	for (let n of e) n.endsWith(".json") && t.push(i.basename(n, ".json"));
+	return t;
+}), n.handle("delete-workflow", async (e, t) => {
+	let n = i.join(Q, `${t}.json`);
+	return await a.unlink(n), { success: !0 };
+}), n.handle("run-workflow", async (e, t) => {
+	if (!X) return {
+		success: !1,
 		error: "No main window"
 	};
-	activeExecutor = new WorkflowExecutor(mainWindow);
-	const credentials = await getCredentialsInternal();
+	Z = new dt(X);
+	let n = await mt();
 	try {
-		return await activeExecutor.execute(workflow, credentials);
-	} catch (err) {
+		return await Z.execute(t, n);
+	} catch (e) {
 		return {
-			success: false,
-			error: err.message
+			success: !1,
+			error: e.message
 		};
 	} finally {
-		activeExecutor = null;
+		Z = null;
 	}
+}), n.handle("stop-workflow", async () => Z ? (Z.cancel(), { success: !0 }) : {
+	success: !1,
+	error: "No active workflow running"
 });
-ipcMain.handle("stop-workflow", async () => {
-	if (activeExecutor) {
-		activeExecutor.cancel();
-		return { success: true };
-	}
-	return {
-		success: false,
-		error: "No active workflow running"
-	};
-});
-async function getCredentialsInternal() {
+async function mt() {
 	try {
-		if (!existsSync(CREDENTIALS_FILE)) return {};
-		const data = await fs.readFile(CREDENTIALS_FILE);
-		if (safeStorage.isEncryptionAvailable()) try {
-			const decrypted = safeStorage.decryptString(data);
-			return JSON.parse(decrypted);
+		if (!o($)) return {};
+		let e = await a.readFile($);
+		if (r.isEncryptionAvailable()) try {
+			let t = r.decryptString(e);
+			return JSON.parse(t);
 		} catch {
-			return JSON.parse(data.toString("utf-8"));
+			return JSON.parse(e.toString("utf-8"));
 		}
-		else return JSON.parse(data.toString("utf-8"));
+		else return JSON.parse(e.toString("utf-8"));
 	} catch {
 		return {};
 	}
 }
-ipcMain.handle("get-credentials", async () => {
-	return await getCredentialsInternal();
-});
-ipcMain.handle("save-credentials", async (_, credentials) => {
-	const stringified = JSON.stringify(credentials);
-	if (safeStorage.isEncryptionAvailable()) {
-		const encrypted = safeStorage.encryptString(stringified);
-		await fs.writeFile(CREDENTIALS_FILE, encrypted);
-		return {
-			success: true,
-			encrypted: true
+n.handle("get-credentials", async () => await mt()), n.handle("save-credentials", async (e, t) => {
+	let n = JSON.stringify(t);
+	if (r.isEncryptionAvailable()) {
+		let e = r.encryptString(n);
+		return await a.writeFile($, e), {
+			success: !0,
+			encrypted: !0
 		};
-	} else {
-		await fs.writeFile(CREDENTIALS_FILE, Buffer.from(stringified, "utf-8"));
-		return {
-			success: true,
-			encrypted: false
-		};
-	}
+	} else return await a.writeFile($, Buffer.from(n, "utf-8")), {
+		success: !0,
+		encrypted: !1
+	};
 });
 //#endregion
 export {};
