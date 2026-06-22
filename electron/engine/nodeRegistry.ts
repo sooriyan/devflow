@@ -56,7 +56,21 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
   terminal: async (node, context) => {
     const rawCommand = node.data.command || ''
     const cwd = resolveVariables(node.data.cwd || '', context) || process.cwd()
+    const shellType = node.data.shellType || 'default'
     
+    let shell: string | undefined = undefined
+    if (shellType === 'bash') {
+      shell = 'bash'
+    } else if (shellType === 'zsh') {
+      shell = 'zsh'
+    } else if (shellType === 'powershell') {
+      shell = 'powershell'
+    } else if (shellType === 'cmd') {
+      shell = 'cmd.exe'
+    } else if (shellType === 'custom' && node.data.customShell) {
+      shell = resolveVariables(node.data.customShell, context)
+    }
+
     const resolvedCommand = resolveVariables(rawCommand, context)
     const lines = resolvedCommand.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
 
@@ -79,6 +93,9 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
     let accumulatedStdout = ''
     let accumulatedStderr = ''
 
+    const shellDisplay = shell ? ` (shell: ${shell})` : ''
+    context.log(node.id, `Executing terminal commands${shellDisplay} in ${cwd}`, 'info')
+
     try {
       for (let i = 0; i < lines.length; i++) {
         if (wasCancelled) {
@@ -89,7 +106,7 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
         context.log(node.id, `[Line ${i + 1}/${lines.length}] Executing command: ${line}`, 'info')
 
         const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
-          const proc = exec(line, { cwd }, (error, stdout, stderr) => {
+          const proc = exec(line, { cwd, shell }, (error, stdout, stderr) => {
             activeProcess = null
             if (stdout) {
               context.log(node.id, stdout, 'info')

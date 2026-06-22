@@ -75,6 +75,36 @@ export const NodeEditor: React.FC = () => {
               />
               <p className="text-[10px] text-zinc-500">Supports variable bindings like <code>{`{{ NodeLabel.stdout }}`}</code></p>
             </div>
+            
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Shell / Terminal Type</label>
+              <select
+                value={node.data.shellType || 'default'}
+                onChange={(e) => handleDataChange('shellType', e.target.value)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="default">Default System Shell</option>
+                <option value="bash">Bash</option>
+                <option value="zsh">Zsh</option>
+                <option value="powershell">PowerShell</option>
+                <option value="cmd">Windows CMD</option>
+                <option value="custom">Custom Shell Path...</option>
+              </select>
+            </div>
+
+            {node.data.shellType === 'custom' && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Custom Shell Path</label>
+                <input
+                  type="text"
+                  value={node.data.customShell || ''}
+                  onChange={(e) => handleDataChange('customShell', e.target.value)}
+                  placeholder="e.g. /bin/bash or C:\bin\bash.exe"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                />
+              </div>
+            )}
+
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Working Directory (CWD)</label>
               <input

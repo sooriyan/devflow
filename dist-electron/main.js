@@ -2043,44 +2043,50 @@ var dt = {
 		timestamp: (/* @__PURE__ */ new Date()).toISOString()
 	}),
 	terminal: async (e, t) => {
-		let n = e.data.command || "", r = J(e.data.cwd || "", t) || process.cwd(), i = J(n, t).split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
-		if (i.length === 0) return t.log(e.id, "No commands to execute", "warn"), {
+		let n = e.data.command || "", r = J(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a;
+		i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = J(e.data.customShell, t));
+		let o = J(n, t).split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
+		if (o.length === 0) return t.log(e.id, "No commands to execute", "warn"), {
 			stdout: "",
 			stderr: "",
 			exitCode: 0
 		};
-		let a = null, o = !1, s = t.onCancel(() => {
-			o = !0, a && (t.log(e.id, "Killing terminal command process", "warn"), a.kill());
-		}), c = "", u = "";
+		let s = null, c = !1, u = t.onCancel(() => {
+			c = !0, s && (t.log(e.id, "Killing terminal command process", "warn"), s.kill());
+		}), d = "", f = "", p = a ? ` (shell: ${a})` : "";
+		t.log(e.id, `Executing terminal commands${p} in ${r}`, "info");
 		try {
-			for (let n = 0; n < i.length; n++) {
-				if (o) throw Error("Terminal execution cancelled by user");
-				let s = i[n];
-				t.log(e.id, `[Line ${n + 1}/${i.length}] Executing command: ${s}`, "info");
-				let d = await new Promise((n, i) => {
-					a = l(s, { cwd: r }, (r, s, c) => {
-						if (a = null, s && t.log(e.id, s, "info"), c && t.log(e.id, c, "warn"), r) if (o) i(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
+			for (let n = 0; n < o.length; n++) {
+				if (c) throw Error("Terminal execution cancelled by user");
+				let i = o[n];
+				t.log(e.id, `[Line ${n + 1}/${o.length}] Executing command: ${i}`, "info");
+				let u = await new Promise((n, o) => {
+					s = l(i, {
+						cwd: r,
+						shell: a
+					}, (r, i, a) => {
+						if (s = null, i && t.log(e.id, i, "info"), a && t.log(e.id, a, "warn"), r) if (c) o(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
 						else {
 							t.log(e.id, `Command failed: ${r.message}`, "error");
 							let n = Error(r.message);
-							n.stdout = s, n.stderr = c, n.exitCode = r.code || 1, i(n);
+							n.stdout = i, n.stderr = a, n.exitCode = r.code || 1, o(n);
 						}
 						else n({
-							stdout: s,
-							stderr: c,
+							stdout: i,
+							stderr: a,
 							exitCode: 0
 						});
 					});
 				});
-				c += d.stdout ? d.stdout + "\n" : "", u += d.stderr ? d.stderr + "\n" : "";
+				d += u.stdout ? u.stdout + "\n" : "", f += u.stderr ? u.stderr + "\n" : "";
 			}
 			return t.log(e.id, "All commands completed successfully", "success"), {
-				stdout: c.trim(),
-				stderr: u.trim(),
+				stdout: d.trim(),
+				stderr: f.trim(),
 				exitCode: 0
 			};
 		} finally {
-			s();
+			u();
 		}
 	},
 	git: async (e, t) => {
