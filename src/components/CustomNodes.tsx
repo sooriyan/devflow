@@ -30,7 +30,8 @@ const NodeWrapper: React.FC<{
   children: React.ReactNode
   title: string
   subtitle?: string
-}> = ({ nodeId, icon, colorClass, children, title, subtitle }) => {
+  contentClass?: string
+}> = ({ nodeId, icon, colorClass, children, title, subtitle, contentClass }) => {
   const nodeStatus = useWorkflowStore((state) => state.nodeStatuses[nodeId])
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId)
   const node = useWorkflowStore((state) => state.nodes.find(n => n.id === nodeId))
@@ -113,7 +114,7 @@ const NodeWrapper: React.FC<{
         </div>
       </div>
       
-      <div className="text-[11px] text-zinc-400 font-mono line-clamp-1 py-1">
+      <div className={`text-[11px] text-zinc-400 font-mono py-1 ${contentClass || 'line-clamp-1'}`}>
         {children}
       </div>
     </div>
@@ -139,8 +140,9 @@ export const TerminalNode: React.FC<NodeProps> = ({ id, data }) => {
       colorClass="bg-zinc-800 border border-zinc-700"
       title={data.label || 'Terminal Command'}
       subtitle={id}
+      contentClass="whitespace-pre-wrap line-clamp-6 break-words max-w-[260px]"
     >
-      <span className="font-mono text-zinc-500">{data.command || 'empty command'}</span>
+      <span className="font-mono text-zinc-500 block">{data.command || 'empty command'}</span>
       <Handle type="target" position={Position.Left} id="in" />
       <Handle type="source" position={Position.Right} id="out" />
     </NodeWrapper>

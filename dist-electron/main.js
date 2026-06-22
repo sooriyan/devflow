@@ -31,16 +31,16 @@ function h(e, t, n, r) {
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/remove.js
-function ee(e, t, n) {
+function g(e, t, n) {
 	if (!e.registry[t]) return;
 	let r = e.registry[t].map((e) => e.orig).indexOf(n);
 	r !== -1 && e.registry[t].splice(r, 1);
 }
 //#endregion
 //#region node_modules/before-after-hook/index.js
-var te = Function.bind, ne = te.bind(te);
-function g(e, t, n) {
-	let r = ne(ee, null).apply(null, n ? [t, n] : [t]);
+var ee = Function.bind, te = ee.bind(ee);
+function ne(e, t, n) {
+	let r = te(g, null).apply(null, n ? [t, n] : [t]);
 	e.api = { remove: r }, e.remove = r, [
 		"before",
 		"error",
@@ -52,16 +52,16 @@ function g(e, t, n) {
 			r,
 			n
 		] : [t, r];
-		e[r] = e.api[r] = ne(h, null).apply(null, i);
+		e[r] = e.api[r] = te(h, null).apply(null, i);
 	});
 }
 function re() {
 	let e = Symbol("Singular"), t = { registry: {} }, n = m.bind(null, t, e);
-	return g(n, t, e), n;
+	return ne(n, t, e), n;
 }
 function ie() {
 	let e = { registry: {} }, t = m.bind(null, e);
-	return g(t, e), t;
+	return ne(t, e), t;
 }
 var ae = {
 	Singular: re,
@@ -509,7 +509,7 @@ var qe = function(e) {
 function Xe(e = {}) {
 	return typeof e.debug != "function" && (e.debug = W), typeof e.info != "function" && (e.info = W), typeof e.warn != "function" && (e.warn = Je), typeof e.error != "function" && (e.error = Ye), e;
 }
-var G = `octokit-core.js/${U} ${p()}`, Ze = class {
+var Ze = `octokit-core.js/${U} ${p()}`, Qe = class {
 	static VERSION = U;
 	static defaults(e) {
 		return class extends this {
@@ -540,7 +540,7 @@ var G = `octokit-core.js/${U} ${p()}`, Ze = class {
 				format: ""
 			}
 		};
-		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${G}` : G, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = L.defaults(n), this.graphql = He(this.request).defaults(n), this.log = Xe(e.log), this.hook = t, e.authStrategy) {
+		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${Ze}` : Ze, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = L.defaults(n), this.graphql = He(this.request).defaults(n), this.log = Xe(e.log), this.hook = t, e.authStrategy) {
 			let { authStrategy: n, ...r } = e, i = n(Object.assign({
 				request: this.request,
 				log: this.log,
@@ -561,10 +561,10 @@ var G = `octokit-core.js/${U} ${p()}`, Ze = class {
 	log;
 	hook;
 	auth;
-}, Qe = "6.0.0";
+}, $e = "6.0.0";
 //#endregion
 //#region node_modules/@octokit/plugin-request-log/dist-src/index.js
-function $e(e) {
+function et(e) {
 	e.hook.wrap("request", (t, n) => {
 		e.log.debug("request", n);
 		let r = Date.now(), i = e.request.endpoint.parse(n), a = i.url.replace(n.baseUrl, "");
@@ -577,11 +577,11 @@ function $e(e) {
 		});
 	});
 }
-$e.VERSION = Qe;
+et.VERSION = $e;
 //#endregion
 //#region node_modules/@octokit/plugin-paginate-rest/dist-bundle/index.js
-var et = "0.0.0-development";
-function tt(e) {
+var tt = "0.0.0-development";
+function nt(e) {
 	if (!e.data) return {
 		...e,
 		data: []
@@ -592,12 +592,12 @@ function tt(e) {
 	let a = Object.keys(e.data)[0];
 	return e.data = e.data[a], t !== void 0 && (e.data.incomplete_results = t), n !== void 0 && (e.data.repository_selection = n), e.data.total_count = r, e.data.total_commits = i, e;
 }
-function K(e, t, n) {
+function G(e, t, n) {
 	let r = typeof t == "function" ? t.endpoint(n) : e.request.endpoint(t, n), i = typeof t == "function" ? t : e.request, a = r.method, o = r.headers, s = r.url;
 	return { [Symbol.asyncIterator]: () => ({ async next() {
 		if (!s) return { done: !0 };
 		try {
-			let e = tt(await i({
+			let e = nt(await i({
 				method: a,
 				url: s,
 				headers: o
@@ -617,27 +617,27 @@ function K(e, t, n) {
 		}
 	} }) };
 }
-function nt(e, t, n, r) {
-	return typeof n == "function" && (r = n, n = void 0), rt(e, [], K(e, t, n)[Symbol.asyncIterator](), r);
-}
 function rt(e, t, n, r) {
+	return typeof n == "function" && (r = n, n = void 0), it(e, [], G(e, t, n)[Symbol.asyncIterator](), r);
+}
+function it(e, t, n, r) {
 	return n.next().then((i) => {
 		if (i.done) return t;
 		let a = !1;
 		function o() {
 			a = !0;
 		}
-		return t = t.concat(r ? r(i.value, o) : i.value.data), a ? t : rt(e, t, n, r);
+		return t = t.concat(r ? r(i.value, o) : i.value.data), a ? t : it(e, t, n, r);
 	});
 }
-Object.assign(nt, { iterator: K });
-function it(e) {
-	return { paginate: Object.assign(nt.bind(null, e), { iterator: K.bind(null, e) }) };
+Object.assign(rt, { iterator: G });
+function at(e) {
+	return { paginate: Object.assign(rt.bind(null, e), { iterator: G.bind(null, e) }) };
 }
-it.VERSION = et;
+at.VERSION = tt;
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
-var at = "17.0.0", ot = {
+var ot = "17.0.0", st = {
 	actions: {
 		addCustomLabelsToSelfHostedRunnerForOrg: ["POST /orgs/{org}/actions/runners/{runner_id}/labels"],
 		addCustomLabelsToSelfHostedRunnerForRepo: ["POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
@@ -1928,22 +1928,22 @@ var at = "17.0.0", ot = {
 		unfollow: ["DELETE /user/following/{username}"],
 		updateAuthenticated: ["PATCH /user"]
 	}
-}, q = /* @__PURE__ */ new Map();
-for (let [e, t] of Object.entries(ot)) for (let [n, r] of Object.entries(t)) {
+}, K = /* @__PURE__ */ new Map();
+for (let [e, t] of Object.entries(st)) for (let [n, r] of Object.entries(t)) {
 	let [t, i, a] = r, [o, s] = t.split(/ /), c = Object.assign({
 		method: o,
 		url: s
 	}, i);
-	q.has(e) || q.set(e, /* @__PURE__ */ new Map()), q.get(e).set(n, {
+	K.has(e) || K.set(e, /* @__PURE__ */ new Map()), K.get(e).set(n, {
 		scope: e,
 		methodName: n,
 		endpointDefaults: c,
 		decorations: a
 	});
 }
-var st = {
+var ct = {
 	has({ scope: e }, t) {
-		return q.get(e).has(t);
+		return K.get(e).has(t);
 	},
 	getOwnPropertyDescriptor(e, t) {
 		return {
@@ -1960,29 +1960,29 @@ var st = {
 		return delete e.cache[t], !0;
 	},
 	ownKeys({ scope: e }) {
-		return [...q.get(e).keys()];
+		return [...K.get(e).keys()];
 	},
 	set(e, t, n) {
 		return e.cache[t] = n;
 	},
 	get({ octokit: e, scope: t, cache: n }, r) {
 		if (n[r]) return n[r];
-		let i = q.get(t).get(r);
+		let i = K.get(t).get(r);
 		if (!i) return;
 		let { endpointDefaults: a, decorations: o } = i;
-		return o ? n[r] = lt(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
+		return o ? n[r] = ut(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
 	}
 };
-function ct(e) {
+function lt(e) {
 	let t = {};
-	for (let n of q.keys()) t[n] = new Proxy({
+	for (let n of K.keys()) t[n] = new Proxy({
 		octokit: e,
 		scope: n,
 		cache: {}
-	}, st);
+	}, ct);
 	return t;
 }
-function lt(e, t, n, r, i) {
+function ut(e, t, n, r, i) {
 	let a = e.request.defaults(r);
 	function o(...r) {
 		let o = a.endpoint.merge(...r);
@@ -2005,24 +2005,24 @@ function lt(e, t, n, r, i) {
 }
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
-function ut(e) {
-	return { rest: ct(e) };
-}
-ut.VERSION = at;
 function dt(e) {
-	let t = ct(e);
+	return { rest: lt(e) };
+}
+dt.VERSION = ot;
+function ft(e) {
+	let t = lt(e);
 	return {
 		...t,
 		rest: t
 	};
 }
-dt.VERSION = at;
+ft.VERSION = ot;
 //#endregion
 //#region node_modules/@octokit/rest/dist-src/index.js
-var ft = Ze.plugin($e, dt, it).defaults({ userAgent: "octokit-rest.js/22.0.1" });
+var pt = Qe.plugin(et, ft, at).defaults({ userAgent: "octokit-rest.js/22.0.1" });
 //#endregion
 //#region electron/engine/nodeRegistry.ts
-function J(e, t) {
+function q(e, t) {
 	return typeof e == "string" ? e.replace(/\{\{\s*([^}]+)\s*\}\}/g, (e, n) => {
 		let r = n.trim().split("."), i = r[0];
 		if (i === "globals") {
@@ -2037,15 +2037,15 @@ function J(e, t) {
 		return typeof o == "object" ? JSON.stringify(o) : o === void 0 ? "" : String(o);
 	}) : e;
 }
-var pt = {
+var mt = {
 	trigger: async (e, t) => (t.log(e.id, "Workflow triggered manually", "success"), {
 		triggered: !0,
 		timestamp: (/* @__PURE__ */ new Date()).toISOString()
 	}),
 	terminal: async (e, t) => {
-		let n = e.data.command || "", r = J(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a;
-		i === "default" ? a = process.platform === "win32" ? void 0 : process.env.SHELL || "/bin/zsh" : i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = J(e.data.customShell, t));
-		let o = J(n, t);
+		let n = e.data.command || "", r = q(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a;
+		i === "default" ? a = process.platform === "win32" ? void 0 : process.env.SHELL || "/bin/zsh" : i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = q(e.data.customShell, t));
+		let o = q(n, t);
 		if (!o.trim()) return t.log(e.id, "No commands to execute", "warn"), {
 			stdout: "",
 			stderr: "",
@@ -2055,8 +2055,8 @@ var pt = {
 		process.platform !== "win32" && (s = "\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nelif [ -s \"$HOME/.nvm/nvm.sh\" ]; then\n  . \"$HOME/.nvm/nvm.sh\"\nelif [ -s \"/usr/local/opt/nvm/nvm.sh\" ]; then\n  . \"/usr/local/opt/nvm/nvm.sh\"\nelif [ -s \"/opt/homebrew/opt/nvm/nvm.sh\" ]; then\n  . \"/opt/homebrew/opt/nvm/nvm.sh\"\nfi\n\n" + o);
 		let c = null, l = !1, d = t.onCancel(() => {
 			l = !0, c && (t.log(e.id, "Killing terminal command process", "warn"), c.kill());
-		}), f = "", p = "", m = "", h = "", ee = a ? ` (shell: ${a})` : "";
-		t.log(e.id, `Executing terminal commands${ee} in ${r}`, "info");
+		}), f = "", p = "", m = "", h = "", g = a ? ` (shell: ${a})` : "";
+		t.log(e.id, `Executing terminal commands${g} in ${r}`, "info");
 		try {
 			if (l) throw Error("Terminal execution cancelled by user");
 			let n = await new Promise((n, i) => {
@@ -2100,7 +2100,7 @@ var pt = {
 		}
 	},
 	git: async (e, t) => {
-		let n = e.data.operation, r = J(e.data.cwd || "", t) || process.cwd(), i = (e) => new Promise((t, n) => {
+		let n = e.data.operation, r = q(e.data.cwd || "", t) || process.cwd(), i = (e) => new Promise((t, n) => {
 			u(e, { cwd: r }, (e, r, i) => {
 				e ? n(Error(i || e.message)) : t(r.trim());
 			});
@@ -2108,7 +2108,7 @@ var pt = {
 		t.log(e.id, `Starting Git Operation: ${n}`, "info");
 		try {
 			if (n === "branch") {
-				let n = J(e.data.branchName || "", t);
+				let n = q(e.data.branchName || "", t);
 				if (!n) throw Error("Branch name is required");
 				t.log(e.id, `Creating and switching to branch: ${n}`, "info");
 				try {
@@ -2121,7 +2121,7 @@ var pt = {
 					success: !0
 				};
 			} else if (n === "commit") {
-				let n = J(e.data.commitMessage || "", t) || "Commit from DevFlow";
+				let n = q(e.data.commitMessage || "", t) || "Commit from DevFlow";
 				t.log(e.id, `Staging files and committing with message: "${n}"`, "info"), await i("git add .");
 				let r = await i(`git commit -m "${n.replace(/"/g, "\\\"")}"`);
 				return t.log(e.id, `Committed successfully: ${r}`, "success"), {
@@ -2129,7 +2129,7 @@ var pt = {
 					success: !0
 				};
 			} else if (n === "cherry-pick") {
-				let n = J(e.data.commitHash || "", t);
+				let n = q(e.data.commitHash || "", t);
 				if (!n) throw Error("Commit hash is required");
 				t.log(e.id, `Cherry picking commit: ${n}`, "info");
 				let r = await i(`git cherry-pick ${n}`);
@@ -2138,7 +2138,7 @@ var pt = {
 					success: !0
 				};
 			} else if (n === "push") {
-				let n = J(e.data.remote || "", t) || "origin", r = J(e.data.branchName || "", t);
+				let n = q(e.data.remote || "", t) || "origin", r = q(e.data.branchName || "", t);
 				if (!r) throw Error("Branch name is required to push");
 				t.log(e.id, `Pushing branch ${r} to ${n}`, "info");
 				let a = await i(`git push ${n} ${r}`);
@@ -2155,11 +2155,11 @@ var pt = {
 	github: async (e, t) => {
 		let n = e.data.operation, r = t.credentials.githubToken;
 		if (!r) throw Error("GitHub Personal Access Token (githubToken) is missing in credentials settings.");
-		let i = new ft({ auth: r }), a = J(e.data.owner || "", t), o = J(e.data.repo || "", t);
+		let i = new pt({ auth: r }), a = q(e.data.owner || "", t), o = q(e.data.repo || "", t);
 		t.log(e.id, `Starting GitHub Operation: ${n} on ${a}/${o}`, "info");
 		try {
 			if (n === "create-pr") {
-				let n = J(e.data.prTitle || "", t), r = J(e.data.headBranch || "", t), s = J(e.data.baseBranch || "", t) || "main", c = J(e.data.prBody || "", t) || "Automated PR by DevFlow";
+				let n = q(e.data.prTitle || "", t), r = q(e.data.headBranch || "", t), s = q(e.data.baseBranch || "", t) || "main", c = q(e.data.prBody || "", t) || "Automated PR by DevFlow";
 				t.log(e.id, `Creating PR from ${r} to ${s}...`, "info");
 				let l = await i.pulls.create({
 					owner: a,
@@ -2176,7 +2176,7 @@ var pt = {
 					success: !0
 				};
 			} else if (n === "pr-comment") {
-				let n = J(e.data.prNumber || "", t), r = parseInt(n, 10), s = J(e.data.commentBody || "", t);
+				let n = q(e.data.prNumber || "", t), r = parseInt(n, 10), s = q(e.data.commentBody || "", t);
 				if (isNaN(r)) throw Error("Valid PR number is required");
 				if (!s) throw Error("Comment body is required");
 				t.log(e.id, `Adding comment to PR #${r}...`, "info");
@@ -2199,13 +2199,13 @@ var pt = {
 	jira: async (e, t) => {
 		let n = e.data.operation, r = t.credentials.jiraHost, i = t.credentials.jiraEmail, a = t.credentials.jiraToken;
 		if (!r || !i || !a) throw Error("Jira credentials (jiraHost, jiraEmail, jiraToken) are incomplete in settings.");
-		let o = J(e.data.issueKey || "", t);
+		let o = q(e.data.issueKey || "", t);
 		if (!o) throw Error("Jira Issue Key (e.g. PROJ-123) is required");
 		let s = `Basic ${Buffer.from(`${i}:${a}`).toString("base64")}`, c = `https://${r.replace(/^https?:\/\//, "")}/rest/api/3`;
 		t.log(e.id, `Starting Jira Operation: ${n} for ${o}`, "info");
 		try {
 			if (n === "comment") {
-				let n = J(e.data.comment || "", t);
+				let n = q(e.data.comment || "", t);
 				if (!n) throw Error("Comment text is required");
 				t.log(e.id, `Adding comment to Jira ticket ${o}...`, "info");
 				let r = { body: {
@@ -2237,7 +2237,7 @@ var pt = {
 					success: !0
 				};
 			} else if (n === "transition") {
-				let n = J(e.data.transitionName || "", t);
+				let n = q(e.data.transitionName || "", t);
 				if (!n) throw Error("Transition target is required");
 				t.log(e.id, `Fetching transitions for ${o}...`, "info");
 				let r = await fetch(`${c}/issue/${o}/transitions`, { headers: { Authorization: s } });
@@ -2268,7 +2268,7 @@ var pt = {
 		}
 	},
 	mcp: async (e, t) => {
-		let n = J(e.data.serverCmd || "", t), r = J(e.data.serverArgs || "", t), i = J(e.data.toolName || "", t), a = J(e.data.toolArgs || "", t) || "{}";
+		let n = q(e.data.serverCmd || "", t), r = q(e.data.serverArgs || "", t), i = q(e.data.toolName || "", t), a = q(e.data.toolArgs || "", t) || "{}";
 		if (!n) throw Error("MCP server command (e.g. npx) is required");
 		if (!i) throw Error("MCP Tool Name is required");
 		let o = r ? r.split(" ").filter(Boolean) : [], s = JSON.parse(a);
@@ -2330,7 +2330,7 @@ var pt = {
 			throw t.log(e.id, `Code execution failed: ${n.message}`, "error"), n;
 		}
 	}
-}, mt = class {
+}, ht = class {
 	isCancelled = !1;
 	isPaused = !1;
 	pausedNodeId = null;
@@ -2454,7 +2454,7 @@ var pt = {
 				}
 				this.activeNodeId = e, this.updateStatus(e, "running"), this.log(e, `Executing node: ${t.data.label || t.type}`, "info");
 				try {
-					let n = pt[t.type];
+					let n = mt[t.type];
 					if (!n) throw Error(`Executor for node type "${t.type}" not found.`);
 					let r = await n(t, l);
 					c[t.id] = r;
@@ -2485,14 +2485,19 @@ var pt = {
 			outputs: c
 		};
 	}
-}, ht = a.dirname(l(import.meta.url)), Y = null, X = null, Z = a.join(t.getPath("userData"), "workflows"), Q = a.join(t.getPath("userData"), "credentials.enc");
+};
+//#endregion
+//#region electron/main.ts
+t.name = "DevFlow";
+var J = a.dirname(l(import.meta.url)), Y = null, X = null, Z = a.join(t.getPath("userData"), "workflows"), Q = a.join(t.getPath("userData"), "credentials.enc");
 s(Z) || c(Z, { recursive: !0 });
 async function gt() {
 	Y = new e({
 		width: 1280,
 		height: 800,
+		icon: process.env.VITE_DEV_SERVER_URL ? a.join(J, "../public/icon.png") : a.join(J, "../dist/icon.png"),
 		webPreferences: {
-			preload: a.join(ht, "preload.js"),
+			preload: a.join(J, "preload.js"),
 			nodeIntegration: !1,
 			contextIsolation: !0
 		},
@@ -2503,7 +2508,7 @@ async function gt() {
 			height: 35
 		},
 		backgroundColor: "#09090b"
-	}), process.env.VITE_DEV_SERVER_URL ? (Y.loadURL(process.env.VITE_DEV_SERVER_URL), Y.webContents.openDevTools()) : Y.loadFile(a.join(ht, "../dist/index.html"));
+	}), process.env.VITE_DEV_SERVER_URL ? (Y.loadURL(process.env.VITE_DEV_SERVER_URL), Y.webContents.openDevTools()) : Y.loadFile(a.join(J, "../dist/index.html"));
 }
 function _t() {
 	if (process.platform !== "win32") try {
@@ -2554,7 +2559,7 @@ t.whenReady().then(() => {
 		success: !1,
 		error: "No main window"
 	};
-	X = new mt(Y);
+	X = new ht(Y);
 	let n = await $();
 	try {
 		return await X.execute(t, n);

@@ -6,6 +6,9 @@ import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import { WorkflowExecutor } from './engine/executor'
 
+// Set application name
+app.name = 'DevFlow'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
@@ -20,9 +23,14 @@ if (!existsSync(WORKFLOWS_DIR)) {
 }
 
 async function createWindow() {
+  const iconPath = process.env.VITE_DEV_SERVER_URL
+    ? path.join(__dirname, '../public/icon.png')
+    : path.join(__dirname, '../dist/icon.png')
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    icon: iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
