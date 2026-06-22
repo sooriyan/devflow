@@ -19,8 +19,13 @@ interface Workflow {
 
 export class WorkflowExecutor {
   private isCancelled = false
+  private isPaused = false
+  private pausedNodeId: string | null = null
+  private pausePromiseResolve: (() => void) | null = null
+  private proceedNext = false
   private activeNodeId: string | null = null
   private window: BrowserWindow
+  private cancelCallbacks = new Set<() => void>()
 
   constructor(window: BrowserWindow) {
     this.window = window
@@ -28,8 +33,65 @@ export class WorkflowExecutor {
 
   cancel() {
     this.isCancelled = true
+    this.isPaused = false
+    if (this.pausePromiseResolve) {
+      this.pausePromiseResolve()
+    }
+    for (const callback of this.cancelCallbacks) {
+      try {
+        callback()
+      } catch (err) {
+        console.error('Error running execution cancel callback:', err)
+      }
+    }
     if (this.activeNodeId) {
       this.log(this.activeNodeId, 'Workflow execution cancelled by user', 'error')
+    }
+  }
+
+  pause() {
+    this.isPaused = true
+    if (this.activeNodeId) {
+      this.log(this.activeNodeId, 'Pause requested. Execution will pause before the next node.', 'info')
+    } else {
+      this.window.webContents.send('workflow-log', {
+        nodeId: 'system',
+        message: 'Pause requested.',
+        type: 'info',
+        timestamp: new Date().toISOString()
+      })
+    }
+  }
+
+  resume() {
+    this.isPaused = false
+    this.proceedNext = false
+    if (this.pausePromiseResolve) {
+      this.pausePromiseResolve()
+    }
+  }
+
+  proceed() {
+    this.isPaused = false
+    this.proceedNext = true
+    if (this.pausePromiseResolve) {
+      this.pausePromiseResolve()
+    }
+  }
+
+  private async checkPause(nodeId: string, nodeIsPausedByBreakpoint: boolean) {
+    if (nodeIsPausedByBreakpoint || this.isPaused) {
+      this.isPaused = true
+      this.pausedNodeId = nodeId
+      this.updateStatus(nodeId, 'paused')
+      this.log(nodeId, `Execution paused. Right-click node to resume (unpause) or proceed to next node.`, 'warn')
+
+      await new Promise<void>((resolve) => {
+        this.pausePromiseResolve = resolve
+      })
+
+      this.pausedNodeId = null
+      this.pausePromiseResolve = null
     }
   }
 
@@ -42,7 +104,7 @@ export class WorkflowExecutor {
     })
   }
 
-  private updateStatus(nodeId: string, status: 'idle' | 'running' | 'success' | 'error', output?: any, error?: string) {
+  private updateStatus(nodeId: string, status: 'idle' | 'running' | 'success' | 'error' | 'paused', output?: any, error?: string) {
     this.window.webContents.send('workflow-status', {
       nodeId,
       status,
@@ -107,7 +169,11 @@ export class WorkflowExecutor {
     const executionContext: ExecutionContext = {
       nodeOutputs,
       credentials,
-      log: (nodeId, message, type) => this.log(nodeId, message, type)
+      log: (nodeId, message, type) => this.log(nodeId, message, type),
+      onCancel: (callback) => {
+        this.cancelCallbacks.add(callback)
+        return () => this.cancelCallbacks.delete(callback)
+      }
     }
 
     // Nodes currently waiting on dependencies
@@ -136,6 +202,35 @@ export class WorkflowExecutor {
       const currentNode = nodes.find(n => n.id === currentId)
 
       if (!currentNode) continue
+
+      await this.checkPause(currentId, currentNode.data?.isPaused === true)
+
+      if (this.isCancelled) {
+        this.window.webContents.send('workflow-log', {
+          nodeId: 'system',
+          message: 'Workflow execution aborted.',
+          type: 'error',
+          timestamp: new Date().toISOString()
+        })
+        return { success: false, cancelled: true }
+      }
+
+      if (this.proceedNext) {
+        this.proceedNext = false
+        this.log(currentId, `Skipped executing node and proceeding to next`, 'info')
+        this.updateStatus(currentId, 'success', {})
+        nodeOutputs[currentId] = {}
+        processedNodes.add(currentId)
+
+        const neighbors = adjList[currentId]
+        neighbors.forEach(neighborId => {
+          inDegree[neighborId]--
+          if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
+            queue.push(neighborId)
+          }
+        })
+        continue
+      }
 
       this.activeNodeId = currentId
       this.updateStatus(currentId, 'running')

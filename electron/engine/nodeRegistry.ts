@@ -5,6 +5,7 @@ export interface ExecutionContext {
   nodeOutputs: Record<string, any>
   credentials: Record<string, any>
   log: (nodeId: string, message: string, type?: 'info' | 'error' | 'success' | 'warn') => void
+  onCancel: (callback: () => void) => () => void
 }
 
 // Simple variable resolver: replaces {{ nodeName.field }} or {{ globals.field }}
@@ -53,28 +54,80 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
 
   // 2. Terminal Node
   terminal: async (node, context) => {
-    const command = resolveVariables(node.data.command || '', context)
+    const rawCommand = node.data.command || ''
     const cwd = resolveVariables(node.data.cwd || '', context) || process.cwd()
     
-    context.log(node.id, `Executing command: ${command} in ${cwd}`, 'info')
+    const resolvedCommand = resolveVariables(rawCommand, context)
+    const lines = resolvedCommand.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
 
-    return new Promise((resolve, reject) => {
-      const process = exec(command, { cwd }, (error, stdout, stderr) => {
-        if (stdout) {
-          context.log(node.id, stdout, 'info')
-        }
-        if (stderr) {
-          context.log(node.id, stderr, 'warn')
-        }
-        if (error) {
-          context.log(node.id, `Command failed: ${error.message}`, 'error')
-          reject({ error: error.message, stdout, stderr, exitCode: error.code })
-        } else {
-          context.log(node.id, `Command completed successfully`, 'success')
-          resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: 0 })
-        }
-      })
+    if (lines.length === 0) {
+      context.log(node.id, `No commands to execute`, 'warn')
+      return { stdout: '', stderr: '', exitCode: 0 }
+    }
+
+    let activeProcess: any = null
+    let wasCancelled = false
+
+    const unsubscribe = context.onCancel(() => {
+      wasCancelled = true
+      if (activeProcess) {
+        context.log(node.id, `Killing terminal command process`, 'warn')
+        activeProcess.kill()
+      }
     })
+
+    let accumulatedStdout = ''
+    let accumulatedStderr = ''
+
+    try {
+      for (let i = 0; i < lines.length; i++) {
+        if (wasCancelled) {
+          throw new Error('Terminal execution cancelled by user')
+        }
+
+        const line = lines[i]
+        context.log(node.id, `[Line ${i + 1}/${lines.length}] Executing command: ${line}`, 'info')
+
+        const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
+          const proc = exec(line, { cwd }, (error, stdout, stderr) => {
+            activeProcess = null
+            if (stdout) {
+              context.log(node.id, stdout, 'info')
+            }
+            if (stderr) {
+              context.log(node.id, stderr, 'warn')
+            }
+            if (error) {
+              if (wasCancelled) {
+                reject(new Error('Terminal execution cancelled by user'))
+              } else {
+                context.log(node.id, `Command failed: ${error.message}`, 'error')
+                const errObj = new Error(error.message) as any
+                errObj.stdout = stdout
+                errObj.stderr = stderr
+                errObj.exitCode = error.code || 1
+                reject(errObj)
+              }
+            } else {
+              resolve({ stdout, stderr, exitCode: 0 })
+            }
+          })
+          activeProcess = proc
+        })
+
+        accumulatedStdout += (result.stdout ? result.stdout + '\n' : '')
+        accumulatedStderr += (result.stderr ? result.stderr + '\n' : '')
+      }
+
+      context.log(node.id, `All commands completed successfully`, 'success')
+      return {
+        stdout: accumulatedStdout.trim(),
+        stderr: accumulatedStderr.trim(),
+        exitCode: 0
+      }
+    } finally {
+      unsubscribe()
+    }
   },
 
   // 3. Git Node
@@ -334,64 +387,83 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
     context.log(node.id, `Starting MCP Connection to Server: "${serverCmd} ${serverArgs.join(' ')}"`, 'info')
     context.log(node.id, `Calling tool: "${toolName}" with args: ${JSON.stringify(toolArgs)}`, 'info')
 
-    return new Promise((resolve, reject) => {
-      const mcpProcess = exec(`${serverCmd} ${serverArgs.join(' ')}`)
-      
-      let stdoutBuffer = ''
-      let resolved = false
+    let activeProcess: any = null
+    let wasCancelled = false
 
-      mcpProcess.stdout?.on('data', (data) => {
-        stdoutBuffer += data
-        // Try parsing JSON-RPC messages
-        const lines = stdoutBuffer.split('\n')
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i].trim()
-          if (!line) continue
-          try {
-            const parsed = JSON.parse(line)
-            if (parsed.id === 1 && (parsed.result || parsed.error)) {
-              resolved = true
-              mcpProcess.kill()
-              if (parsed.error) {
-                context.log(node.id, `MCP Tool execution failed: ${parsed.error.message}`, 'error')
-                reject(new Error(parsed.error.message))
-              } else {
-                context.log(node.id, `MCP Tool execution succeeded`, 'success')
-                resolve(parsed.result)
+    const unsubscribe = context.onCancel(() => {
+      wasCancelled = true
+      if (activeProcess) {
+        context.log(node.id, `Killing MCP process`, 'warn')
+        activeProcess.kill()
+      }
+    })
+
+    try {
+      return await new Promise((resolve, reject) => {
+        const mcpProcess = exec(`${serverCmd} ${serverArgs.join(' ')}`)
+        activeProcess = mcpProcess
+        
+        let stdoutBuffer = ''
+        let resolved = false
+
+        mcpProcess.stdout?.on('data', (data) => {
+          stdoutBuffer += data
+          // Try parsing JSON-RPC messages
+          const lines = stdoutBuffer.split('\n')
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i].trim()
+            if (!line) continue
+            try {
+              const parsed = JSON.parse(line)
+              if (parsed.id === 1 && (parsed.result || parsed.error)) {
+                resolved = true
+                mcpProcess.kill()
+                if (parsed.error) {
+                  context.log(node.id, `MCP Tool execution failed: ${parsed.error.message}`, 'error')
+                  reject(new Error(parsed.error.message))
+                } else {
+                  context.log(node.id, `MCP Tool execution succeeded`, 'success')
+                  resolve(parsed.result)
+                }
+                break
               }
-              break
+            } catch {
+              // Ignore incomplete chunks or non-json lines (stderr/debug lines)
             }
-          } catch {
-            // Ignore incomplete chunks or non-json lines (stderr/debug lines)
+          }
+          stdoutBuffer = lines[lines.length - 1]
+        })
+
+        mcpProcess.stderr?.on('data', (data) => {
+          context.log(node.id, `[MCP Server Log] ${data}`, 'warn')
+        })
+
+        mcpProcess.on('close', (code) => {
+          activeProcess = null
+          if (wasCancelled) {
+            reject(new Error(`MCP execution cancelled by user`))
+          } else if (!resolved) {
+            reject(new Error(`MCP server closed prematurely with code ${code}`))
+          }
+        })
+
+        // Send JSON-RPC tools/call Request
+        const jsonRpcRequest = {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: {
+            name: toolName,
+            arguments: toolArgs
           }
         }
-        stdoutBuffer = lines[lines.length - 1]
+
+        context.log(node.id, `Sending JSON-RPC request to MCP stdin`, 'info')
+        mcpProcess.stdin?.write(JSON.stringify(jsonRpcRequest) + '\n')
       })
-
-      mcpProcess.stderr?.on('data', (data) => {
-        context.log(node.id, `[MCP Server Log] ${data}`, 'warn')
-      })
-
-      mcpProcess.on('close', (code) => {
-        if (!resolved) {
-          reject(new Error(`MCP server closed prematurely with code ${code}`))
-        }
-      })
-
-      // Send JSON-RPC tools/call Request
-      const jsonRpcRequest = {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: {
-          name: toolName,
-          arguments: toolArgs
-        }
-      }
-
-      context.log(node.id, `Sending JSON-RPC request to MCP stdin`, 'info')
-      mcpProcess.stdin?.write(JSON.stringify(jsonRpcRequest) + '\n')
-    })
+    } finally {
+      unsubscribe()
+    }
   },
 
   // 7. Custom JavaScript Code Node

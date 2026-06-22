@@ -43,9 +43,16 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
     }
   }
 
+  const isMac = typeof window !== 'undefined' && (
+    (window.electronAPI && window.electronAPI.platform === 'darwin') ||
+    navigator.userAgent.toLowerCase().includes('mac')
+  )
+
   return (
     <div 
-      className="h-14 border-b border-border flex items-center justify-between pl-6 pr-36 glass-panel select-none z-10" 
+      className={`h-14 border-b border-border flex items-center justify-between glass-panel select-none z-10 ${
+        isMac ? 'pl-20 pr-6' : 'pl-6 pr-36'
+      }`}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Brand & Name */}

@@ -118,6 +118,30 @@ ipcMain.handle('stop-workflow', async () => {
   return { success: false, error: 'No active workflow running' }
 })
 
+ipcMain.handle('pause-workflow', async () => {
+  if (activeExecutor) {
+    activeExecutor.pause()
+    return { success: true }
+  }
+  return { success: false, error: 'No active workflow running' }
+})
+
+ipcMain.handle('resume-workflow', async () => {
+  if (activeExecutor) {
+    activeExecutor.resume()
+    return { success: true }
+  }
+  return { success: false, error: 'No active workflow running' }
+})
+
+ipcMain.handle('proceed-workflow', async () => {
+  if (activeExecutor) {
+    activeExecutor.proceed()
+    return { success: true }
+  }
+  return { success: false, error: 'No active workflow running' }
+})
+
 // 3. Credentials storage (Secure storage with safeStorage fallback)
 async function getCredentialsInternal() {
   try {

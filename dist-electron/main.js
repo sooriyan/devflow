@@ -19,7 +19,7 @@ function f(e, t, n, r) {
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/add.js
-function ee(e, t, n, r) {
+function p(e, t, n, r) {
 	let i = r;
 	e.registry[n] || (e.registry[n] = []), t === "before" && (r = (e, t) => Promise.resolve().then(i.bind(null, t)).then(e.bind(null, t))), t === "after" && (r = (e, t) => {
 		let n;
@@ -31,16 +31,16 @@ function ee(e, t, n, r) {
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/remove.js
-function te(e, t, n) {
+function ee(e, t, n) {
 	if (!e.registry[t]) return;
 	let r = e.registry[t].map((e) => e.orig).indexOf(n);
 	r !== -1 && e.registry[t].splice(r, 1);
 }
 //#endregion
 //#region node_modules/before-after-hook/index.js
-var p = Function.bind, ne = p.bind(p);
+var te = Function.bind, ne = te.bind(te);
 function re(e, t, n) {
-	let r = ne(te, null).apply(null, n ? [t, n] : [t]);
+	let r = ne(ee, null).apply(null, n ? [t, n] : [t]);
 	e.api = { remove: r }, e.remove = r, [
 		"before",
 		"error",
@@ -52,7 +52,7 @@ function re(e, t, n) {
 			r,
 			n
 		] : [t, r];
-		e[r] = e.api[r] = ne(ee, null).apply(null, i);
+		e[r] = e.api[r] = ne(p, null).apply(null, i);
 	});
 }
 function ie() {
@@ -208,16 +208,16 @@ function ve(e) {
 function ye(e, t, n) {
 	return ve(h(e, t, n));
 }
-function be(e, t) {
+function S(e, t) {
 	let n = h(e, t), r = ye.bind(null, n);
 	return Object.assign(r, {
 		DEFAULTS: n,
-		defaults: be.bind(null, n),
+		defaults: S.bind(null, n),
 		merge: h.bind(null, n),
 		parse: ve
 	});
 }
-var xe = be(null, se), Se = (/* @__PURE__ */ u(((e) => {
+var be = S(null, se), xe = (/* @__PURE__ */ u(((e) => {
 	Object.defineProperty(e, "__esModule", { value: !0 }), e.parse = n;
 	var t = /* @__PURE__ */ (() => {
 		let e = function() {};
@@ -292,24 +292,24 @@ var xe = be(null, se), Se = (/* @__PURE__ */ u(((e) => {
 		}
 		return n;
 	}
-})))(), Ce = /^-?\d+$/, S = /^-?\d+n+$/, C = JSON.stringify, w = JSON.parse, we = /^-?\d+n$/, Te = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ee = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, De = (e, t, n) => "rawJSON" in JSON ? C(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? C(e, (e, n) => typeof n == "string" && S.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(Te, "$1$2$3").replace(Ee, "$1$2$3") : C(e, t, n), T = /* @__PURE__ */ new Map(), Oe = () => {
+})))(), Se = /^-?\d+$/, C = /^-?\d+n+$/, w = JSON.stringify, T = JSON.parse, Ce = /^-?\d+n$/, we = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Te = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ee = (e, t, n) => "rawJSON" in JSON ? w(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? w(e, (e, n) => typeof n == "string" && C.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(we, "$1$2$3").replace(Te, "$1$2$3") : w(e, t, n), E = /* @__PURE__ */ new Map(), De = () => {
 	let e = JSON.parse.toString();
-	if (T.has(e)) return T.get(e);
+	if (E.has(e)) return E.get(e);
 	try {
 		let t = JSON.parse("1", (e, t, n) => !!n?.source && n.source === "1");
-		return T.set(e, t), t;
+		return E.set(e, t), t;
 	} catch {
-		return T.set(e, !1), !1;
+		return E.set(e, !1), !1;
 	}
-}, ke = (e, t, n, r) => typeof t == "string" && we.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && S.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, Ae = (e, t) => JSON.parse(e, (e, n, r) => {
-	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && Ce.test(r.source);
+}, Oe = (e, t, n, r) => typeof t == "string" && Ce.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && C.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, ke = (e, t) => JSON.parse(e, (e, n, r) => {
+	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && Se.test(r.source);
 	return i && a ? BigInt(r.source) : typeof t == "function" ? t(e, n, r) : n;
-}), E = (2 ** 53 - 1).toString(), D = E.length, je = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Me = /^"-?\d+n+"$/, Ne = (e, t) => e ? Oe() ? Ae(e, t) : w(e.replace(je, (e, t, n, r) => {
+}), D = (2 ** 53 - 1).toString(), Ae = D.length, je = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Me = /^"-?\d+n+"$/, Ne = (e, t) => e ? De() ? ke(e, t) : T(e.replace(je, (e, t, n, r) => {
 	let i = e[0] === "\"";
 	if (i && Me.test(e)) return e.substring(0, e.length - 1) + "n\"";
-	let a = n || r, o = t && (t.length < D || t.length === D && t <= E);
+	let a = n || r, o = t && (t.length < Ae || t.length === Ae && t <= D);
 	return i || a || o ? e : "\"" + e + "n\"";
-}), (e, n, r) => ke(e, n, r, t)) : w(e, t), O = class extends Error {
+}), (e, n, r) => Oe(e, n, r, t)) : T(e, t), O = class extends Error {
 	name;
 	status;
 	request;
@@ -328,11 +328,11 @@ function Fe(e) {
 	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
 	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-var k = () => "";
-async function Ie(e) {
+var Ie = () => "";
+async function k(e) {
 	let t = e.request?.fetch || globalThis.fetch;
 	if (!t) throw Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
-	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = Fe(e.body) || Array.isArray(e.body) ? De(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
+	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = Fe(e.body) || Array.isArray(e.body) ? Ee(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
 	try {
 		o = await t(e.url, {
 			method: e.method,
@@ -383,8 +383,8 @@ async function Ie(e) {
 }
 async function A(e) {
 	let t = e.headers.get("content-type");
-	if (!t) return e.text().catch(k);
-	let n = (0, Se.parse)(t);
+	if (!t) return e.text().catch(Ie);
+	let n = (0, xe.parse)(t);
 	if (Le(n)) {
 		let t = "";
 		try {
@@ -392,7 +392,7 @@ async function A(e) {
 		} catch {
 			return t;
 		}
-	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(k);
+	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(Ie);
 	else return e.arrayBuffer().catch(
 		/* v8 ignore next -- @preserve */
 		() => /* @__PURE__ */ new ArrayBuffer(0)
@@ -414,8 +414,8 @@ function j(e, t) {
 	let n = e.defaults(t);
 	return Object.assign(function(e, t) {
 		let r = n.merge(e, t);
-		if (!r.request || !r.request.hook) return Ie(n.parse(r));
-		let i = (e, t) => Ie(n.parse(n.merge(e, t)));
+		if (!r.request || !r.request.hook) return k(n.parse(r));
+		let i = (e, t) => k(n.parse(n.merge(e, t)));
 		return Object.assign(i, {
 			endpoint: n,
 			defaults: j.bind(null, n)
@@ -425,7 +425,7 @@ function j(e, t) {
 		defaults: j.bind(null, n)
 	});
 }
-var M = j(xe, Pe), ze = "0.0.0-development";
+var M = j(be, Pe), ze = "0.0.0-development";
 function Be(e) {
 	return "Request failed due to following response errors:\n" + e.errors.map((e) => ` - ${e.message}`).join("\n");
 }
@@ -1970,10 +1970,10 @@ var at = {
 		let i = q.get(t).get(r);
 		if (!i) return;
 		let { endpointDefaults: a, decorations: o } = i;
-		return o ? n[r] = ot(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
+		return o ? n[r] = st(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
 	}
 };
-function J(e) {
+function ot(e) {
 	let t = {};
 	for (let n of q.keys()) t[n] = new Proxy({
 		octokit: e,
@@ -1982,7 +1982,7 @@ function J(e) {
 	}, at);
 	return t;
 }
-function ot(e, t, n, r, i) {
+function st(e, t, n, r, i) {
 	let a = e.request.defaults(r);
 	function o(...r) {
 		let o = a.endpoint.merge(...r);
@@ -2005,24 +2005,24 @@ function ot(e, t, n, r, i) {
 }
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
-function st(e) {
-	return { rest: J(e) };
-}
-st.VERSION = K;
 function ct(e) {
-	let t = J(e);
+	return { rest: ot(e) };
+}
+ct.VERSION = K;
+function lt(e) {
+	let t = ot(e);
 	return {
 		...t,
 		rest: t
 	};
 }
-ct.VERSION = K;
+lt.VERSION = K;
 //#endregion
 //#region node_modules/@octokit/rest/dist-src/index.js
-var lt = et.plugin(V, ct, G).defaults({ userAgent: "octokit-rest.js/22.0.1" });
+var ut = et.plugin(V, lt, G).defaults({ userAgent: "octokit-rest.js/22.0.1" });
 //#endregion
 //#region electron/engine/nodeRegistry.ts
-function Y(e, t) {
+function J(e, t) {
 	return typeof e == "string" ? e.replace(/\{\{\s*([^}]+)\s*\}\}/g, (e, n) => {
 		let r = n.trim().split("."), i = r[0];
 		if (i === "globals") {
@@ -2037,30 +2037,54 @@ function Y(e, t) {
 		return typeof o == "object" ? JSON.stringify(o) : o === void 0 ? "" : String(o);
 	}) : e;
 }
-var ut = {
+var dt = {
 	trigger: async (e, t) => (t.log(e.id, "Workflow triggered manually", "success"), {
 		triggered: !0,
 		timestamp: (/* @__PURE__ */ new Date()).toISOString()
 	}),
 	terminal: async (e, t) => {
-		let n = Y(e.data.command || "", t), r = Y(e.data.cwd || "", t) || process.cwd();
-		return t.log(e.id, `Executing command: ${n} in ${r}`, "info"), new Promise((i, a) => {
-			l(n, { cwd: r }, (n, r, o) => {
-				r && t.log(e.id, r, "info"), o && t.log(e.id, o, "warn"), n ? (t.log(e.id, `Command failed: ${n.message}`, "error"), a({
-					error: n.message,
-					stdout: r,
-					stderr: o,
-					exitCode: n.code
-				})) : (t.log(e.id, "Command completed successfully", "success"), i({
-					stdout: r.trim(),
-					stderr: o.trim(),
-					exitCode: 0
-				}));
-			});
-		});
+		let n = e.data.command || "", r = J(e.data.cwd || "", t) || process.cwd(), i = J(n, t).split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
+		if (i.length === 0) return t.log(e.id, "No commands to execute", "warn"), {
+			stdout: "",
+			stderr: "",
+			exitCode: 0
+		};
+		let a = null, o = !1, s = t.onCancel(() => {
+			o = !0, a && (t.log(e.id, "Killing terminal command process", "warn"), a.kill());
+		}), c = "", u = "";
+		try {
+			for (let n = 0; n < i.length; n++) {
+				if (o) throw Error("Terminal execution cancelled by user");
+				let s = i[n];
+				t.log(e.id, `[Line ${n + 1}/${i.length}] Executing command: ${s}`, "info");
+				let d = await new Promise((n, i) => {
+					a = l(s, { cwd: r }, (r, s, c) => {
+						if (a = null, s && t.log(e.id, s, "info"), c && t.log(e.id, c, "warn"), r) if (o) i(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
+						else {
+							t.log(e.id, `Command failed: ${r.message}`, "error");
+							let n = Error(r.message);
+							n.stdout = s, n.stderr = c, n.exitCode = r.code || 1, i(n);
+						}
+						else n({
+							stdout: s,
+							stderr: c,
+							exitCode: 0
+						});
+					});
+				});
+				c += d.stdout ? d.stdout + "\n" : "", u += d.stderr ? d.stderr + "\n" : "";
+			}
+			return t.log(e.id, "All commands completed successfully", "success"), {
+				stdout: c.trim(),
+				stderr: u.trim(),
+				exitCode: 0
+			};
+		} finally {
+			s();
+		}
 	},
 	git: async (e, t) => {
-		let n = e.data.operation, r = Y(e.data.cwd || "", t) || process.cwd(), i = (e) => new Promise((t, n) => {
+		let n = e.data.operation, r = J(e.data.cwd || "", t) || process.cwd(), i = (e) => new Promise((t, n) => {
 			l(e, { cwd: r }, (e, r, i) => {
 				e ? n(Error(i || e.message)) : t(r.trim());
 			});
@@ -2068,7 +2092,7 @@ var ut = {
 		t.log(e.id, `Starting Git Operation: ${n}`, "info");
 		try {
 			if (n === "branch") {
-				let n = Y(e.data.branchName || "", t);
+				let n = J(e.data.branchName || "", t);
 				if (!n) throw Error("Branch name is required");
 				t.log(e.id, `Creating and switching to branch: ${n}`, "info");
 				try {
@@ -2081,7 +2105,7 @@ var ut = {
 					success: !0
 				};
 			} else if (n === "commit") {
-				let n = Y(e.data.commitMessage || "", t) || "Commit from DevFlow";
+				let n = J(e.data.commitMessage || "", t) || "Commit from DevFlow";
 				t.log(e.id, `Staging files and committing with message: "${n}"`, "info"), await i("git add .");
 				let r = await i(`git commit -m "${n.replace(/"/g, "\\\"")}"`);
 				return t.log(e.id, `Committed successfully: ${r}`, "success"), {
@@ -2089,7 +2113,7 @@ var ut = {
 					success: !0
 				};
 			} else if (n === "cherry-pick") {
-				let n = Y(e.data.commitHash || "", t);
+				let n = J(e.data.commitHash || "", t);
 				if (!n) throw Error("Commit hash is required");
 				t.log(e.id, `Cherry picking commit: ${n}`, "info");
 				let r = await i(`git cherry-pick ${n}`);
@@ -2098,7 +2122,7 @@ var ut = {
 					success: !0
 				};
 			} else if (n === "push") {
-				let n = Y(e.data.remote || "", t) || "origin", r = Y(e.data.branchName || "", t);
+				let n = J(e.data.remote || "", t) || "origin", r = J(e.data.branchName || "", t);
 				if (!r) throw Error("Branch name is required to push");
 				t.log(e.id, `Pushing branch ${r} to ${n}`, "info");
 				let a = await i(`git push ${n} ${r}`);
@@ -2115,11 +2139,11 @@ var ut = {
 	github: async (e, t) => {
 		let n = e.data.operation, r = t.credentials.githubToken;
 		if (!r) throw Error("GitHub Personal Access Token (githubToken) is missing in credentials settings.");
-		let i = new lt({ auth: r }), a = Y(e.data.owner || "", t), o = Y(e.data.repo || "", t);
+		let i = new ut({ auth: r }), a = J(e.data.owner || "", t), o = J(e.data.repo || "", t);
 		t.log(e.id, `Starting GitHub Operation: ${n} on ${a}/${o}`, "info");
 		try {
 			if (n === "create-pr") {
-				let n = Y(e.data.prTitle || "", t), r = Y(e.data.headBranch || "", t), s = Y(e.data.baseBranch || "", t) || "main", c = Y(e.data.prBody || "", t) || "Automated PR by DevFlow";
+				let n = J(e.data.prTitle || "", t), r = J(e.data.headBranch || "", t), s = J(e.data.baseBranch || "", t) || "main", c = J(e.data.prBody || "", t) || "Automated PR by DevFlow";
 				t.log(e.id, `Creating PR from ${r} to ${s}...`, "info");
 				let l = await i.pulls.create({
 					owner: a,
@@ -2136,7 +2160,7 @@ var ut = {
 					success: !0
 				};
 			} else if (n === "pr-comment") {
-				let n = Y(e.data.prNumber || "", t), r = parseInt(n, 10), s = Y(e.data.commentBody || "", t);
+				let n = J(e.data.prNumber || "", t), r = parseInt(n, 10), s = J(e.data.commentBody || "", t);
 				if (isNaN(r)) throw Error("Valid PR number is required");
 				if (!s) throw Error("Comment body is required");
 				t.log(e.id, `Adding comment to PR #${r}...`, "info");
@@ -2159,13 +2183,13 @@ var ut = {
 	jira: async (e, t) => {
 		let n = e.data.operation, r = t.credentials.jiraHost, i = t.credentials.jiraEmail, a = t.credentials.jiraToken;
 		if (!r || !i || !a) throw Error("Jira credentials (jiraHost, jiraEmail, jiraToken) are incomplete in settings.");
-		let o = Y(e.data.issueKey || "", t);
+		let o = J(e.data.issueKey || "", t);
 		if (!o) throw Error("Jira Issue Key (e.g. PROJ-123) is required");
 		let s = `Basic ${Buffer.from(`${i}:${a}`).toString("base64")}`, c = `https://${r.replace(/^https?:\/\//, "")}/rest/api/3`;
 		t.log(e.id, `Starting Jira Operation: ${n} for ${o}`, "info");
 		try {
 			if (n === "comment") {
-				let n = Y(e.data.comment || "", t);
+				let n = J(e.data.comment || "", t);
 				if (!n) throw Error("Comment text is required");
 				t.log(e.id, `Adding comment to Jira ticket ${o}...`, "info");
 				let r = { body: {
@@ -2197,7 +2221,7 @@ var ut = {
 					success: !0
 				};
 			} else if (n === "transition") {
-				let n = Y(e.data.transitionName || "", t);
+				let n = J(e.data.transitionName || "", t);
 				if (!n) throw Error("Transition target is required");
 				t.log(e.id, `Fetching transitions for ${o}...`, "info");
 				let r = await fetch(`${c}/issue/${o}/transitions`, { headers: { Authorization: s } });
@@ -2228,42 +2252,52 @@ var ut = {
 		}
 	},
 	mcp: async (e, t) => {
-		let n = Y(e.data.serverCmd || "", t), r = Y(e.data.serverArgs || "", t), i = Y(e.data.toolName || "", t), a = Y(e.data.toolArgs || "", t) || "{}";
+		let n = J(e.data.serverCmd || "", t), r = J(e.data.serverArgs || "", t), i = J(e.data.toolName || "", t), a = J(e.data.toolArgs || "", t) || "{}";
 		if (!n) throw Error("MCP server command (e.g. npx) is required");
 		if (!i) throw Error("MCP Tool Name is required");
 		let o = r ? r.split(" ").filter(Boolean) : [], s = JSON.parse(a);
-		return t.log(e.id, `Starting MCP Connection to Server: "${n} ${o.join(" ")}"`, "info"), t.log(e.id, `Calling tool: "${i}" with args: ${JSON.stringify(s)}`, "info"), new Promise((r, a) => {
-			let c = l(`${n} ${o.join(" ")}`), u = "", d = !1;
-			c.stdout?.on("data", (n) => {
-				u += n;
-				let i = u.split("\n");
-				for (let n = 0; n < i.length - 1; n++) {
-					let o = i[n].trim();
-					if (o) try {
-						let n = JSON.parse(o);
-						if (n.id === 1 && (n.result || n.error)) {
-							d = !0, c.kill(), n.error ? (t.log(e.id, `MCP Tool execution failed: ${n.error.message}`, "error"), a(Error(n.error.message))) : (t.log(e.id, "MCP Tool execution succeeded", "success"), r(n.result));
-							break;
-						}
-					} catch {}
-				}
-				u = i[i.length - 1];
-			}), c.stderr?.on("data", (n) => {
-				t.log(e.id, `[MCP Server Log] ${n}`, "warn");
-			}), c.on("close", (e) => {
-				d || a(/* @__PURE__ */ Error(`MCP server closed prematurely with code ${e}`));
-			});
-			let f = {
-				jsonrpc: "2.0",
-				id: 1,
-				method: "tools/call",
-				params: {
-					name: i,
-					arguments: s
-				}
-			};
-			t.log(e.id, "Sending JSON-RPC request to MCP stdin", "info"), c.stdin?.write(JSON.stringify(f) + "\n");
+		t.log(e.id, `Starting MCP Connection to Server: "${n} ${o.join(" ")}"`, "info"), t.log(e.id, `Calling tool: "${i}" with args: ${JSON.stringify(s)}`, "info");
+		let c = null, u = !1, d = t.onCancel(() => {
+			u = !0, c && (t.log(e.id, "Killing MCP process", "warn"), c.kill());
 		});
+		try {
+			return await new Promise((r, a) => {
+				let d = l(`${n} ${o.join(" ")}`);
+				c = d;
+				let f = "", p = !1;
+				d.stdout?.on("data", (n) => {
+					f += n;
+					let i = f.split("\n");
+					for (let n = 0; n < i.length - 1; n++) {
+						let o = i[n].trim();
+						if (o) try {
+							let n = JSON.parse(o);
+							if (n.id === 1 && (n.result || n.error)) {
+								p = !0, d.kill(), n.error ? (t.log(e.id, `MCP Tool execution failed: ${n.error.message}`, "error"), a(Error(n.error.message))) : (t.log(e.id, "MCP Tool execution succeeded", "success"), r(n.result));
+								break;
+							}
+						} catch {}
+					}
+					f = i[i.length - 1];
+				}), d.stderr?.on("data", (n) => {
+					t.log(e.id, `[MCP Server Log] ${n}`, "warn");
+				}), d.on("close", (e) => {
+					c = null, u ? a(/* @__PURE__ */ Error("MCP execution cancelled by user")) : p || a(/* @__PURE__ */ Error(`MCP server closed prematurely with code ${e}`));
+				});
+				let ee = {
+					jsonrpc: "2.0",
+					id: 1,
+					method: "tools/call",
+					params: {
+						name: i,
+						arguments: s
+					}
+				};
+				t.log(e.id, "Sending JSON-RPC request to MCP stdin", "info"), d.stdin?.write(JSON.stringify(ee) + "\n");
+			});
+		} finally {
+			d();
+		}
 	},
 	javascript: async (e, t) => {
 		let n = e.data.code || "";
@@ -2280,15 +2314,45 @@ var ut = {
 			throw t.log(e.id, `Code execution failed: ${n.message}`, "error"), n;
 		}
 	}
-}, dt = class {
+}, ft = class {
 	isCancelled = !1;
+	isPaused = !1;
+	pausedNodeId = null;
+	pausePromiseResolve = null;
+	proceedNext = !1;
 	activeNodeId = null;
 	window;
+	cancelCallbacks = /* @__PURE__ */ new Set();
 	constructor(e) {
 		this.window = e;
 	}
 	cancel() {
-		this.isCancelled = !0, this.activeNodeId && this.log(this.activeNodeId, "Workflow execution cancelled by user", "error");
+		this.isCancelled = !0, this.isPaused = !1, this.pausePromiseResolve && this.pausePromiseResolve();
+		for (let e of this.cancelCallbacks) try {
+			e();
+		} catch (e) {
+			console.error("Error running execution cancel callback:", e);
+		}
+		this.activeNodeId && this.log(this.activeNodeId, "Workflow execution cancelled by user", "error");
+	}
+	pause() {
+		this.isPaused = !0, this.activeNodeId ? this.log(this.activeNodeId, "Pause requested. Execution will pause before the next node.", "info") : this.window.webContents.send("workflow-log", {
+			nodeId: "system",
+			message: "Pause requested.",
+			type: "info",
+			timestamp: (/* @__PURE__ */ new Date()).toISOString()
+		});
+	}
+	resume() {
+		this.isPaused = !1, this.proceedNext = !1, this.pausePromiseResolve && this.pausePromiseResolve();
+	}
+	proceed() {
+		this.isPaused = !1, this.proceedNext = !0, this.pausePromiseResolve && this.pausePromiseResolve();
+	}
+	async checkPause(e, t) {
+		(t || this.isPaused) && (this.isPaused = !0, this.pausedNodeId = e, this.updateStatus(e, "paused"), this.log(e, "Execution paused. Right-click node to resume (unpause) or proceed to next node.", "warn"), await new Promise((e) => {
+			this.pausePromiseResolve = e;
+		}), this.pausedNodeId = null, this.pausePromiseResolve = null);
 	}
 	log(e, t, n = "info") {
 		this.window.webContents.send("workflow-log", {
@@ -2329,7 +2393,8 @@ var ut = {
 		let c = {}, l = {
 			nodeOutputs: c,
 			credentials: t,
-			log: (e, t, n) => this.log(e, t, n)
+			log: (e, t, n) => this.log(e, t, n),
+			onCancel: (e) => (this.cancelCallbacks.add(e), () => this.cancelCallbacks.delete(e))
 		}, u = /* @__PURE__ */ new Set();
 		for (this.window.webContents.send("workflow-log", {
 			nodeId: "system",
@@ -2348,9 +2413,24 @@ var ut = {
 			};
 			let e = o.shift(), t = n.find((t) => t.id === e);
 			if (t) {
+				if (await this.checkPause(e, t.data?.isPaused === !0), this.isCancelled) return this.window.webContents.send("workflow-log", {
+					nodeId: "system",
+					message: "Workflow execution aborted.",
+					type: "error",
+					timestamp: (/* @__PURE__ */ new Date()).toISOString()
+				}), {
+					success: !1,
+					cancelled: !0
+				};
+				if (this.proceedNext) {
+					this.proceedNext = !1, this.log(e, "Skipped executing node and proceeding to next", "info"), this.updateStatus(e, "success", {}), c[e] = {}, u.add(e), i[e].forEach((e) => {
+						a[e]--, a[e] === 0 && !u.has(e) && o.push(e);
+					});
+					continue;
+				}
 				this.activeNodeId = e, this.updateStatus(e, "running"), this.log(e, `Executing node: ${t.data.label || t.type}`, "info");
 				try {
-					let n = ut[t.type];
+					let n = dt[t.type];
 					if (!n) throw Error(`Executor for node type "${t.type}" not found.`);
 					let r = await n(t, l);
 					c[t.id] = r;
@@ -2381,14 +2461,14 @@ var ut = {
 			outputs: c
 		};
 	}
-}, ft = i.dirname(c(import.meta.url)), X = null, Z = null, Q = i.join(t.getPath("userData"), "workflows"), $ = i.join(t.getPath("userData"), "credentials.enc");
+}, Y = i.dirname(c(import.meta.url)), X = null, Z = null, Q = i.join(t.getPath("userData"), "workflows"), $ = i.join(t.getPath("userData"), "credentials.enc");
 o(Q) || s(Q, { recursive: !0 });
 async function pt() {
 	X = new e({
 		width: 1280,
 		height: 800,
 		webPreferences: {
-			preload: i.join(ft, "preload.js"),
+			preload: i.join(Y, "preload.js"),
 			nodeIntegration: !1,
 			contextIsolation: !0
 		},
@@ -2399,7 +2479,7 @@ async function pt() {
 			height: 35
 		},
 		backgroundColor: "#09090b"
-	}), process.env.VITE_DEV_SERVER_URL ? (X.loadURL(process.env.VITE_DEV_SERVER_URL), X.webContents.openDevTools()) : X.loadFile(i.join(ft, "../dist/index.html"));
+	}), process.env.VITE_DEV_SERVER_URL ? (X.loadURL(process.env.VITE_DEV_SERVER_URL), X.webContents.openDevTools()) : X.loadFile(i.join(Y, "../dist/index.html"));
 }
 t.whenReady().then(() => {
 	pt(), t.on("activate", () => {
@@ -2425,7 +2505,7 @@ t.whenReady().then(() => {
 		success: !1,
 		error: "No main window"
 	};
-	Z = new dt(X);
+	Z = new ft(X);
 	let n = await mt();
 	try {
 		return await Z.execute(t, n);
@@ -2438,6 +2518,15 @@ t.whenReady().then(() => {
 		Z = null;
 	}
 }), n.handle("stop-workflow", async () => Z ? (Z.cancel(), { success: !0 }) : {
+	success: !1,
+	error: "No active workflow running"
+}), n.handle("pause-workflow", async () => Z ? (Z.pause(), { success: !0 }) : {
+	success: !1,
+	error: "No active workflow running"
+}), n.handle("resume-workflow", async () => Z ? (Z.resume(), { success: !0 }) : {
+	success: !1,
+	error: "No active workflow running"
+}), n.handle("proceed-workflow", async () => Z ? (Z.proceed(), { success: !0 }) : {
 	success: !1,
 	error: "No active workflow running"
 });

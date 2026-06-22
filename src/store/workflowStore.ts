@@ -28,7 +28,7 @@ interface LogEntry {
 }
 
 interface NodeExecutionState {
-  status: 'idle' | 'running' | 'success' | 'error'
+  status: 'idle' | 'running' | 'success' | 'error' | 'paused'
   output?: any
   error?: string
 }
@@ -74,12 +74,16 @@ interface WorkflowState {
 declare global {
   interface Window {
     electronAPI: {
+      platform: string
       saveWorkflow: (name: string, data: any) => Promise<{ success: boolean }>
       loadWorkflow: (name: string) => Promise<any>
       listWorkflows: () => Promise<string[]>
       deleteWorkflow: (name: string) => Promise<{ success: boolean }>
       runWorkflow: (workflow: any) => Promise<any>
       stopWorkflow: () => Promise<any>
+      pauseWorkflow: () => Promise<any>
+      resumeWorkflow: () => Promise<any>
+      proceedWorkflow: () => Promise<any>
       onWorkflowLog: (callback: (log: any) => void) => () => void
       onWorkflowStatus: (callback: (status: any) => void) => () => void
       saveCredentials: (credentials: any) => Promise<{ success: boolean; encrypted: boolean }>

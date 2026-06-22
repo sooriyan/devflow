@@ -10,7 +10,8 @@ import {
   Code2,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  Pause
 } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
@@ -32,9 +33,11 @@ const NodeWrapper: React.FC<{
 }> = ({ nodeId, icon, colorClass, children, title, subtitle }) => {
   const nodeStatus = useWorkflowStore((state) => state.nodeStatuses[nodeId])
   const selectedNodeId = useWorkflowStore((state) => state.selectedNodeId)
+  const node = useWorkflowStore((state) => state.nodes.find(n => n.id === nodeId))
   
   const isSelected = selectedNodeId === nodeId
   const status = nodeStatus?.status || 'idle'
+  const isPausedBreakpoint = node?.data?.isPaused === true
 
   let borderStyle = 'border-border'
   let glowStyle = ''
@@ -46,6 +49,9 @@ const NodeWrapper: React.FC<{
   if (status === 'running') {
     borderStyle = 'border-accent'
     glowStyle = 'glow-active'
+  } else if (status === 'paused') {
+    borderStyle = 'border-yellow-500'
+    glowStyle = 'shadow-[0_0_15px_rgba(234,179,8,0.15)] animate-pulse'
   } else if (status === 'success') {
     borderStyle = 'border-accent-green'
     glowStyle = 'shadow-glow-green'
@@ -69,10 +75,22 @@ const NodeWrapper: React.FC<{
           </div>
         </div>
 
-        {/* Status Badge */}
+        {/* Status / Breakpoint Badge */}
         <div className="flex items-center">
+          {isPausedBreakpoint && status !== 'paused' && (
+            <div className="flex items-center gap-0.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1 py-0.5 rounded text-[8px] font-semibold uppercase mr-1" title="Pause on reach">
+              <Pause className="w-2 h-2 fill-current" />
+              <span>Break</span>
+            </div>
+          )}
           {status === 'running' && (
             <Loader2 className="w-4 h-4 text-accent animate-spin" />
+          )}
+          {status === 'paused' && (
+            <div className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase">
+              <Pause className="w-2.5 h-2.5 animate-pulse fill-current" />
+              <span>Paused</span>
+            </div>
           )}
           {status === 'success' && (
             <CheckCircle2 className="w-4 h-4 text-accent-green" />
