@@ -88,6 +88,7 @@ declare global {
       onWorkflowStatus: (callback: (status: any) => void) => () => void
       saveCredentials: (credentials: any) => Promise<{ success: boolean; encrypted: boolean }>
       getCredentials: () => Promise<any>
+      selectDirectory: () => Promise<string | null>
     }
   }
 }

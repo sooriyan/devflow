@@ -203,6 +203,28 @@ export class WorkflowExecutor {
 
       if (!currentNode) continue
 
+      if (currentNode.data?.isDisabled === true) {
+        this.log(currentId, `Node is paused (disabled). Skipping execution.`, 'info')
+        this.updateStatus(currentId, 'success', { skipped: true })
+        nodeOutputs[currentId] = { skipped: true }
+        
+        const cleanName = (currentNode.data.label || '').replace(/[^a-zA-Z0-9]/g, '')
+        if (cleanName) {
+          nodeOutputs[cleanName] = { skipped: true }
+        }
+
+        processedNodes.add(currentId)
+
+        const neighbors = adjList[currentId]
+        neighbors.forEach(neighborId => {
+          inDegree[neighborId]--
+          if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
+            queue.push(neighborId)
+          }
+        })
+        continue
+      }
+
       await this.checkPause(currentId, currentNode.data?.isPaused === true)
 
       if (this.isCancelled) {

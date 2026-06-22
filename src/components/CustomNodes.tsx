@@ -38,6 +38,7 @@ const NodeWrapper: React.FC<{
   const isSelected = selectedNodeId === nodeId
   const status = nodeStatus?.status || 'idle'
   const isPausedBreakpoint = node?.data?.isPaused === true
+  const isDisabledNode = node?.data?.isDisabled === true
 
   let borderStyle = 'border-border'
   let glowStyle = ''
@@ -60,9 +61,14 @@ const NodeWrapper: React.FC<{
     glowStyle = 'shadow-glow-red'
   }
 
+  let opacityStyle = ''
+  if (isDisabledNode) {
+    opacityStyle = 'opacity-40 grayscale-[20%] border-dashed'
+  }
+
   return (
     <div
-      className={`glass-panel rounded-xl px-4 py-3 min-w-[200px] border transition-all duration-300 ${borderStyle} ${glowStyle} text-foreground`}
+      className={`glass-panel rounded-xl px-4 py-3 min-w-[200px] border transition-all duration-300 ${borderStyle} ${glowStyle} ${opacityStyle} text-foreground`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -77,7 +83,13 @@ const NodeWrapper: React.FC<{
 
         {/* Status / Breakpoint Badge */}
         <div className="flex items-center">
-          {isPausedBreakpoint && status !== 'paused' && (
+          {isDisabledNode && (
+            <div className="flex items-center gap-0.5 bg-zinc-800 text-zinc-400 border border-zinc-700 px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase mr-1" title="Node is paused (skipped during execution)">
+              <Pause className="w-2 h-2 fill-current" />
+              <span>Paused</span>
+            </div>
+          )}
+          {isPausedBreakpoint && status !== 'paused' && !isDisabledNode && (
             <div className="flex items-center gap-0.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 px-1 py-0.5 rounded text-[8px] font-semibold uppercase mr-1" title="Pause on reach">
               <Pause className="w-2 h-2 fill-current" />
               <span>Break</span>

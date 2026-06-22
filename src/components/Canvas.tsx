@@ -168,6 +168,28 @@ export const Canvas: React.FC = () => {
               )}
             </button>
 
+            {/* Toggle Pause/Disable Node */}
+            <button
+              onClick={() => {
+                const currentIsDisabled = contextMenu.node.data?.isDisabled === true
+                updateNodeData(contextMenu.node.id, { isDisabled: !currentIsDisabled })
+                setContextMenu(null)
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-zinc-300 hover:text-white hover:bg-zinc-800/80 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Pause
+                  className={`w-3.5 h-3.5 ${
+                    contextMenu.node.data?.isDisabled ? 'text-red-400 fill-current' : 'text-zinc-500'
+                  }`}
+                />
+                <span>{contextMenu.node.data?.isDisabled ? 'Resume Node' : 'Pause Node'}</span>
+              </div>
+              {!contextMenu.node.data?.isDisabled && (
+                <span className="text-[10px] text-zinc-500 font-mono">Skip</span>
+              )}
+            </button>
+
             <div className="h-[1px] bg-border my-1" />
 
             {/* Pause Current Execution */}

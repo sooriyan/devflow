@@ -1,5 +1,5 @@
 import React from 'react'
-import { X, Trash2, Info } from 'lucide-react'
+import { X, Trash2, Info, FolderOpen } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
 export const NodeEditor: React.FC = () => {
@@ -107,13 +107,28 @@ export const NodeEditor: React.FC = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Working Directory (CWD)</label>
-              <input
-                type="text"
-                value={node.data.cwd || ''}
-                onChange={(e) => handleDataChange('cwd', e.target.value)}
-                placeholder="Defaults to current folder"
-                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={node.data.cwd || ''}
+                  onChange={(e) => handleDataChange('cwd', e.target.value)}
+                  placeholder="Defaults to current folder"
+                  className="flex-1 min-w-0 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const path = await window.electronAPI.selectDirectory()
+                    if (path) {
+                      handleDataChange('cwd', path)
+                    }
+                  }}
+                  className="px-2.5 bg-zinc-800 hover:bg-zinc-700 border border-border hover:border-zinc-500 rounded-lg text-xs text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Browse folder"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -201,13 +216,28 @@ export const NodeEditor: React.FC = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Working Directory (CWD)</label>
-              <input
-                type="text"
-                value={node.data.cwd || ''}
-                onChange={(e) => handleDataChange('cwd', e.target.value)}
-                placeholder="Defaults to current folder"
-                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={node.data.cwd || ''}
+                  onChange={(e) => handleDataChange('cwd', e.target.value)}
+                  placeholder="Defaults to current folder"
+                  className="flex-1 min-w-0 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const path = await window.electronAPI.selectDirectory()
+                    if (path) {
+                      handleDataChange('cwd', path)
+                    }
+                  }}
+                  className="px-2.5 bg-zinc-800 hover:bg-zinc-700 border border-border hover:border-zinc-500 rounded-lg text-xs text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Browse folder"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </>
         )}

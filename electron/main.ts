@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { existsSync, mkdirSync } from 'fs'
@@ -91,6 +91,18 @@ app.on('window-all-closed', () => {
 })
 
 // IPC HANDLERS
+
+ipcMain.handle('select-directory', async () => {
+  const win = BrowserWindow.getFocusedWindow() || mainWindow || undefined
+  const result = await dialog.showOpenDialog(win!, {
+    properties: ['openDirectory']
+  })
+  if (result.canceled) {
+    return null
+  } else {
+    return result.filePaths[0]
+  }
+})
 
 // 1. Workflow file management
 ipcMain.handle('save-workflow', async (_, name: string, data: any) => {
