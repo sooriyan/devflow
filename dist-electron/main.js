@@ -3,23 +3,23 @@ import i from "path";
 import a from "fs/promises";
 import { existsSync as o, mkdirSync as s } from "fs";
 import { fileURLToPath as c } from "url";
-import { exec as l } from "child_process";
+import { exec as l, execSync as u } from "child_process";
 //#region \0rolldown/runtime.js
-var u = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t.exports);
+var d = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t.exports);
 //#endregion
 //#region node_modules/universal-user-agent/index.js
-function d() {
+function f() {
 	return typeof navigator == "object" && "userAgent" in navigator ? navigator.userAgent : typeof process == "object" && process.version !== void 0 ? `Node.js/${process.version.substr(1)} (${process.platform}; ${process.arch})` : "<environment undetectable>";
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/register.js
-function f(e, t, n, r) {
+function p(e, t, n, r) {
 	if (typeof n != "function") throw Error("method for before hook must be a function");
-	return r ||= {}, Array.isArray(t) ? t.reverse().reduce((t, n) => f.bind(null, e, n, t, r), n)() : Promise.resolve().then(() => e.registry[t] ? e.registry[t].reduce((e, t) => t.hook.bind(null, e, r), n)() : n(r));
+	return r ||= {}, Array.isArray(t) ? t.reverse().reduce((t, n) => p.bind(null, e, n, t, r), n)() : Promise.resolve().then(() => e.registry[t] ? e.registry[t].reduce((e, t) => t.hook.bind(null, e, r), n)() : n(r));
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/add.js
-function p(e, t, n, r) {
+function m(e, t, n, r) {
 	let i = r;
 	e.registry[n] || (e.registry[n] = []), t === "before" && (r = (e, t) => Promise.resolve().then(i.bind(null, t)).then(e.bind(null, t))), t === "after" && (r = (e, t) => {
 		let n;
@@ -31,16 +31,16 @@ function p(e, t, n, r) {
 }
 //#endregion
 //#region node_modules/before-after-hook/lib/remove.js
-function ee(e, t, n) {
+function h(e, t, n) {
 	if (!e.registry[t]) return;
 	let r = e.registry[t].map((e) => e.orig).indexOf(n);
 	r !== -1 && e.registry[t].splice(r, 1);
 }
 //#endregion
 //#region node_modules/before-after-hook/index.js
-var te = Function.bind, ne = te.bind(te);
-function re(e, t, n) {
-	let r = ne(ee, null).apply(null, n ? [t, n] : [t]);
+var g = Function.bind, _ = g.bind(g);
+function ee(e, t, n) {
+	let r = _(h, null).apply(null, n ? [t, n] : [t]);
 	e.api = { remove: r }, e.remove = r, [
 		"before",
 		"error",
@@ -52,50 +52,50 @@ function re(e, t, n) {
 			r,
 			n
 		] : [t, r];
-		e[r] = e.api[r] = ne(p, null).apply(null, i);
+		e[r] = e.api[r] = _(m, null).apply(null, i);
 	});
 }
-function ie() {
-	let e = Symbol("Singular"), t = { registry: {} }, n = f.bind(null, t, e);
-	return re(n, t, e), n;
+function te() {
+	let e = Symbol("Singular"), t = { registry: {} }, n = p.bind(null, t, e);
+	return ee(n, t, e), n;
 }
-function ae() {
-	let e = { registry: {} }, t = f.bind(null, e);
-	return re(t, e), t;
+function ne() {
+	let e = { registry: {} }, t = p.bind(null, e);
+	return ee(t, e), t;
 }
-var oe = {
-	Singular: ie,
-	Collection: ae
-}, se = {
+var re = {
+	Singular: te,
+	Collection: ne
+}, ie = {
 	method: "GET",
 	baseUrl: "https://api.github.com",
 	headers: {
 		accept: "application/vnd.github.v3+json",
-		"user-agent": `octokit-endpoint.js/0.0.0-development ${d()}`
+		"user-agent": `octokit-endpoint.js/0.0.0-development ${f()}`
 	},
 	mediaType: { format: "" }
 };
-function ce(e) {
+function ae(e) {
 	return e ? Object.keys(e).reduce((t, n) => (t[n.toLowerCase()] = e[n], t), {}) : {};
 }
-function le(e) {
+function oe(e) {
 	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
 	let t = Object.getPrototypeOf(e);
 	if (t === null) return !0;
 	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
 	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-function ue(e, t) {
+function v(e, t) {
 	let n = Object.assign({}, e);
 	return Object.keys(t).forEach((r) => {
-		le(t[r]) && r in e ? n[r] = ue(e[r], t[r]) : Object.assign(n, { [r]: t[r] });
+		oe(t[r]) && r in e ? n[r] = v(e[r], t[r]) : Object.assign(n, { [r]: t[r] });
 	}), n;
 }
-function m(e) {
+function y(e) {
 	for (let t in e) e[t] === void 0 && delete e[t];
 	return e;
 }
-function h(e, t, n) {
+function b(e, t, n) {
 	if (typeof t == "string") {
 		let [e, r] = t.split(" ");
 		n = Object.assign(r ? {
@@ -103,69 +103,69 @@ function h(e, t, n) {
 			url: r
 		} : { url: e }, n);
 	} else n = Object.assign({}, t);
-	n.headers = ce(n.headers), m(n), m(n.headers);
-	let r = ue(e || {}, n);
+	n.headers = ae(n.headers), y(n), y(n.headers);
+	let r = v(e || {}, n);
 	return n.url === "/graphql" && (e && e.mediaType.previews?.length && (r.mediaType.previews = e.mediaType.previews.filter((e) => !r.mediaType.previews.includes(e)).concat(r.mediaType.previews)), r.mediaType.previews = (r.mediaType.previews || []).map((e) => e.replace(/-preview/, ""))), r;
 }
-function de(e, t) {
+function se(e, t) {
 	let n = /\?/.test(e) ? "&" : "?", r = Object.keys(t);
 	return r.length === 0 ? e : e + n + r.map((e) => e === "q" ? "q=" + t.q.split("+").map(encodeURIComponent).join("+") : `${e}=${encodeURIComponent(t[e])}`).join("&");
 }
-var fe = /\{[^{}}]+\}/g;
-function pe(e) {
+var ce = /\{[^{}}]+\}/g;
+function le(e) {
 	return e.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
-function me(e) {
-	let t = e.match(fe);
-	return t ? t.map(pe).reduce((e, t) => e.concat(t), []) : [];
+function ue(e) {
+	let t = e.match(ce);
+	return t ? t.map(le).reduce((e, t) => e.concat(t), []) : [];
 }
-function g(e, t) {
+function de(e, t) {
 	let n = { __proto__: null };
 	for (let r of Object.keys(e)) t.indexOf(r) === -1 && (n[r] = e[r]);
 	return n;
 }
-function _(e) {
+function fe(e) {
 	return e.split(/(%[0-9A-Fa-f]{2})/g).map(function(e) {
 		return /%[0-9A-Fa-f]/.test(e) || (e = encodeURI(e).replace(/%5B/g, "[").replace(/%5D/g, "]")), e;
 	}).join("");
 }
-function v(e) {
+function x(e) {
 	return encodeURIComponent(e).replace(/[!'()*]/g, function(e) {
 		return "%" + e.charCodeAt(0).toString(16).toUpperCase();
 	});
 }
-function y(e, t, n) {
-	return t = e === "+" || e === "#" ? _(t) : v(t), n ? v(n) + "=" + t : t;
+function S(e, t, n) {
+	return t = e === "+" || e === "#" ? fe(t) : x(t), n ? x(n) + "=" + t : t;
 }
-function b(e) {
+function C(e) {
 	return e != null;
 }
-function x(e) {
+function w(e) {
 	return e === ";" || e === "&" || e === "?";
 }
-function he(e, t, n, r) {
+function pe(e, t, n, r) {
 	var i = e[n], a = [];
-	if (b(i) && i !== "") if (typeof i == "string" || typeof i == "number" || typeof i == "bigint" || typeof i == "boolean") i = i.toString(), r && r !== "*" && (i = i.substring(0, parseInt(r, 10))), a.push(y(t, i, x(t) ? n : ""));
-	else if (r === "*") Array.isArray(i) ? i.filter(b).forEach(function(e) {
-		a.push(y(t, e, x(t) ? n : ""));
+	if (C(i) && i !== "") if (typeof i == "string" || typeof i == "number" || typeof i == "bigint" || typeof i == "boolean") i = i.toString(), r && r !== "*" && (i = i.substring(0, parseInt(r, 10))), a.push(S(t, i, w(t) ? n : ""));
+	else if (r === "*") Array.isArray(i) ? i.filter(C).forEach(function(e) {
+		a.push(S(t, e, w(t) ? n : ""));
 	}) : Object.keys(i).forEach(function(e) {
-		b(i[e]) && a.push(y(t, i[e], e));
+		C(i[e]) && a.push(S(t, i[e], e));
 	});
 	else {
 		let e = [];
-		Array.isArray(i) ? i.filter(b).forEach(function(n) {
-			e.push(y(t, n));
+		Array.isArray(i) ? i.filter(C).forEach(function(n) {
+			e.push(S(t, n));
 		}) : Object.keys(i).forEach(function(n) {
-			b(i[n]) && (e.push(v(n)), e.push(y(t, i[n].toString())));
-		}), x(t) ? a.push(v(n) + "=" + e.join(",")) : e.length !== 0 && a.push(e.join(","));
+			C(i[n]) && (e.push(x(n)), e.push(S(t, i[n].toString())));
+		}), w(t) ? a.push(x(n) + "=" + e.join(",")) : e.length !== 0 && a.push(e.join(","));
 	}
-	else t === ";" ? b(i) && a.push(v(n)) : i === "" && (t === "&" || t === "?") ? a.push(v(n) + "=") : i === "" && a.push("");
+	else t === ";" ? C(i) && a.push(x(n)) : i === "" && (t === "&" || t === "?") ? a.push(x(n) + "=") : i === "" && a.push("");
 	return a;
 }
-function ge(e) {
-	return { expand: _e.bind(null, e) };
+function me(e) {
+	return { expand: he.bind(null, e) };
 }
-function _e(e, t) {
+function he(e, t) {
 	var n = [
 		"+",
 		"#",
@@ -180,44 +180,44 @@ function _e(e, t) {
 			let e = "", i = [];
 			if (n.indexOf(r.charAt(0)) !== -1 && (e = r.charAt(0), r = r.substr(1)), r.split(/,/g).forEach(function(n) {
 				var r = /([^:\*]*)(?::(\d+)|(\*))?/.exec(n);
-				i.push(he(t, e, r[1], r[2] || r[3]));
+				i.push(pe(t, e, r[1], r[2] || r[3]));
 			}), e && e !== "+") {
 				var a = ",";
 				return e === "?" ? a = "&" : e !== "#" && (a = e), (i.length === 0 ? "" : e) + i.join(a);
 			} else return i.join(",");
-		} else return _(i);
+		} else return fe(i);
 	}), e === "/" ? e : e.replace(/\/$/, "");
 }
-function ve(e) {
-	let t = e.method.toUpperCase(), n = (e.url || "/").replace(/:([a-z]\w+)/g, "{$1}"), r = Object.assign({}, e.headers), i, a = g(e, [
+function T(e) {
+	let t = e.method.toUpperCase(), n = (e.url || "/").replace(/:([a-z]\w+)/g, "{$1}"), r = Object.assign({}, e.headers), i, a = de(e, [
 		"method",
 		"baseUrl",
 		"url",
 		"headers",
 		"request",
 		"mediaType"
-	]), o = me(n);
-	n = ge(n).expand(a), /^http/.test(n) || (n = e.baseUrl + n);
-	let s = g(a, Object.keys(e).filter((e) => o.includes(e)).concat("baseUrl"));
-	return /application\/octet-stream/i.test(r.accept) || (e.mediaType.format && (r.accept = r.accept.split(/,/).map((t) => t.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${e.mediaType.format}`)).join(",")), n.endsWith("/graphql") && e.mediaType.previews?.length && (r.accept = (r.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(e.mediaType.previews).map((t) => `application/vnd.github.${t}-preview${e.mediaType.format ? `.${e.mediaType.format}` : "+json"}`).join(","))), ["GET", "HEAD"].includes(t) ? n = de(n, s) : "data" in s ? i = s.data : Object.keys(s).length && (i = s), !r["content-type"] && i !== void 0 && (r["content-type"] = "application/json; charset=utf-8"), ["PATCH", "PUT"].includes(t) && i === void 0 && (i = ""), Object.assign({
+	]), o = ue(n);
+	n = me(n).expand(a), /^http/.test(n) || (n = e.baseUrl + n);
+	let s = de(a, Object.keys(e).filter((e) => o.includes(e)).concat("baseUrl"));
+	return /application\/octet-stream/i.test(r.accept) || (e.mediaType.format && (r.accept = r.accept.split(/,/).map((t) => t.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${e.mediaType.format}`)).join(",")), n.endsWith("/graphql") && e.mediaType.previews?.length && (r.accept = (r.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(e.mediaType.previews).map((t) => `application/vnd.github.${t}-preview${e.mediaType.format ? `.${e.mediaType.format}` : "+json"}`).join(","))), ["GET", "HEAD"].includes(t) ? n = se(n, s) : "data" in s ? i = s.data : Object.keys(s).length && (i = s), !r["content-type"] && i !== void 0 && (r["content-type"] = "application/json; charset=utf-8"), ["PATCH", "PUT"].includes(t) && i === void 0 && (i = ""), Object.assign({
 		method: t,
 		url: n,
 		headers: r
 	}, i === void 0 ? null : { body: i }, e.request ? { request: e.request } : null);
 }
-function ye(e, t, n) {
-	return ve(h(e, t, n));
+function ge(e, t, n) {
+	return T(b(e, t, n));
 }
-function S(e, t) {
-	let n = h(e, t), r = ye.bind(null, n);
+function E(e, t) {
+	let n = b(e, t), r = ge.bind(null, n);
 	return Object.assign(r, {
 		DEFAULTS: n,
-		defaults: S.bind(null, n),
-		merge: h.bind(null, n),
-		parse: ve
+		defaults: E.bind(null, n),
+		merge: b.bind(null, n),
+		parse: T
 	});
 }
-var be = S(null, se), xe = (/* @__PURE__ */ u(((e) => {
+var _e = E(null, ie), ve = (/* @__PURE__ */ d(((e) => {
 	Object.defineProperty(e, "__esModule", { value: !0 }), e.parse = n;
 	var t = /* @__PURE__ */ (() => {
 		let e = function() {};
@@ -292,24 +292,24 @@ var be = S(null, se), xe = (/* @__PURE__ */ u(((e) => {
 		}
 		return n;
 	}
-})))(), Se = /^-?\d+$/, C = /^-?\d+n+$/, w = JSON.stringify, T = JSON.parse, Ce = /^-?\d+n$/, we = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Te = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ee = (e, t, n) => "rawJSON" in JSON ? w(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? w(e, (e, n) => typeof n == "string" && C.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(we, "$1$2$3").replace(Te, "$1$2$3") : w(e, t, n), E = /* @__PURE__ */ new Map(), De = () => {
+})))(), ye = /^-?\d+$/, D = /^-?\d+n+$/, O = JSON.stringify, k = JSON.parse, be = /^-?\d+n$/, xe = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Se = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ce = (e, t, n) => "rawJSON" in JSON ? O(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? O(e, (e, n) => typeof n == "string" && D.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(xe, "$1$2$3").replace(Se, "$1$2$3") : O(e, t, n), A = /* @__PURE__ */ new Map(), we = () => {
 	let e = JSON.parse.toString();
-	if (E.has(e)) return E.get(e);
+	if (A.has(e)) return A.get(e);
 	try {
 		let t = JSON.parse("1", (e, t, n) => !!n?.source && n.source === "1");
-		return E.set(e, t), t;
+		return A.set(e, t), t;
 	} catch {
-		return E.set(e, !1), !1;
+		return A.set(e, !1), !1;
 	}
-}, Oe = (e, t, n, r) => typeof t == "string" && Ce.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && C.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, ke = (e, t) => JSON.parse(e, (e, n, r) => {
-	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && Se.test(r.source);
+}, Te = (e, t, n, r) => typeof t == "string" && be.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && D.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, Ee = (e, t) => JSON.parse(e, (e, n, r) => {
+	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && ye.test(r.source);
 	return i && a ? BigInt(r.source) : typeof t == "function" ? t(e, n, r) : n;
-}), D = (2 ** 53 - 1).toString(), Ae = D.length, je = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Me = /^"-?\d+n+"$/, Ne = (e, t) => e ? De() ? ke(e, t) : T(e.replace(je, (e, t, n, r) => {
+}), j = (2 ** 53 - 1).toString(), M = j.length, De = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Oe = /^"-?\d+n+"$/, ke = (e, t) => e ? we() ? Ee(e, t) : k(e.replace(De, (e, t, n, r) => {
 	let i = e[0] === "\"";
-	if (i && Me.test(e)) return e.substring(0, e.length - 1) + "n\"";
-	let a = n || r, o = t && (t.length < Ae || t.length === Ae && t <= D);
+	if (i && Oe.test(e)) return e.substring(0, e.length - 1) + "n\"";
+	let a = n || r, o = t && (t.length < M || t.length === M && t <= j);
 	return i || a || o ? e : "\"" + e + "n\"";
-}), (e, n, r) => Oe(e, n, r, t)) : T(e, t), O = class extends Error {
+}), (e, n, r) => Te(e, n, r, t)) : k(e, t), N = class extends Error {
 	name;
 	status;
 	request;
@@ -320,19 +320,19 @@ var be = S(null, se), xe = (/* @__PURE__ */ u(((e) => {
 		let r = Object.assign({}, n.request);
 		n.request.headers.authorization && (r.headers = Object.assign({}, n.request.headers, { authorization: n.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]") })), r.url = r.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]"), this.request = r;
 	}
-}, Pe = { headers: { "user-agent": `octokit-request.js/10.0.10 ${d()}` } };
-function Fe(e) {
+}, Ae = { headers: { "user-agent": `octokit-request.js/10.0.10 ${f()}` } };
+function je(e) {
 	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
 	let t = Object.getPrototypeOf(e);
 	if (t === null) return !0;
 	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
 	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-var Ie = () => "";
-async function k(e) {
+var P = () => "";
+async function F(e) {
 	let t = e.request?.fetch || globalThis.fetch;
 	if (!t) throw Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
-	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = Fe(e.body) || Array.isArray(e.body) ? Ee(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
+	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = je(e.body) || Array.isArray(e.body) ? Ce(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
 	try {
 		o = await t(e.url, {
 			method: e.method,
@@ -348,7 +348,7 @@ async function k(e) {
 			if (t.name === "AbortError") throw t.status = 500, t;
 			n = t.message, t.name === "TypeError" && "cause" in t && (t.cause instanceof Error ? n = t.cause.message : typeof t.cause == "string" && (n = t.cause));
 		}
-		let r = new O(n, 500, { request: e });
+		let r = new N(n, 500, { request: e });
 		throw r.cause = t, r;
 	}
 	let s = o.status, c = o.url, l = {};
@@ -366,42 +366,42 @@ async function k(e) {
 	if (s === 204 || s === 205) return u;
 	if (e.method === "HEAD") {
 		if (s < 400) return u;
-		throw new O(o.statusText, s, {
+		throw new N(o.statusText, s, {
 			response: u,
 			request: e
 		});
 	}
-	if (s === 304) throw u.data = await A(o), new O("Not modified", s, {
+	if (s === 304) throw u.data = await I(o), new N("Not modified", s, {
 		response: u,
 		request: e
 	});
-	if (s >= 400) throw u.data = await A(o), new O(Re(u.data), s, {
+	if (s >= 400) throw u.data = await I(o), new N(Ne(u.data), s, {
 		response: u,
 		request: e
 	});
-	return u.data = r ? await A(o) : o.body, u;
+	return u.data = r ? await I(o) : o.body, u;
 }
-async function A(e) {
+async function I(e) {
 	let t = e.headers.get("content-type");
-	if (!t) return e.text().catch(Ie);
-	let n = (0, xe.parse)(t);
-	if (Le(n)) {
+	if (!t) return e.text().catch(P);
+	let n = (0, ve.parse)(t);
+	if (Me(n)) {
 		let t = "";
 		try {
-			return t = await e.text(), Ne(t);
+			return t = await e.text(), ke(t);
 		} catch {
 			return t;
 		}
-	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(Ie);
+	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(P);
 	else return e.arrayBuffer().catch(
 		/* v8 ignore next -- @preserve */
 		() => /* @__PURE__ */ new ArrayBuffer(0)
 	);
 }
-function Le(e) {
+function Me(e) {
 	return e.type === "application/json" || e.type === "application/scim+json";
 }
-function Re(e) {
+function Ne(e) {
 	if (typeof e == "string") return e;
 	if (e instanceof ArrayBuffer) return "Unknown error";
 	if ("message" in e) {
@@ -410,33 +410,33 @@ function Re(e) {
 	}
 	return `Unknown error: ${JSON.stringify(e)}`;
 }
-function j(e, t) {
+function L(e, t) {
 	let n = e.defaults(t);
 	return Object.assign(function(e, t) {
 		let r = n.merge(e, t);
-		if (!r.request || !r.request.hook) return k(n.parse(r));
-		let i = (e, t) => k(n.parse(n.merge(e, t)));
+		if (!r.request || !r.request.hook) return F(n.parse(r));
+		let i = (e, t) => F(n.parse(n.merge(e, t)));
 		return Object.assign(i, {
 			endpoint: n,
-			defaults: j.bind(null, n)
+			defaults: L.bind(null, n)
 		}), r.request.hook(i, r);
 	}, {
 		endpoint: n,
-		defaults: j.bind(null, n)
+		defaults: L.bind(null, n)
 	});
 }
-var M = j(be, Pe), ze = "0.0.0-development";
-function Be(e) {
+var R = L(_e, Ae), Pe = "0.0.0-development";
+function Fe(e) {
 	return "Request failed due to following response errors:\n" + e.errors.map((e) => ` - ${e.message}`).join("\n");
 }
-var Ve = class extends Error {
+var Ie = class extends Error {
 	constructor(e, t, n) {
-		super(Be(n)), this.request = e, this.headers = t, this.response = n, this.errors = n.errors, this.data = n.data, Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
+		super(Fe(n)), this.request = e, this.headers = t, this.response = n, this.errors = n.errors, this.data = n.data, Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
 	}
 	name = "GraphqlResponseError";
 	errors;
 	data;
-}, He = [
+}, Le = [
 	"method",
 	"baseUrl",
 	"url",
@@ -445,72 +445,72 @@ var Ve = class extends Error {
 	"query",
 	"mediaType",
 	"operationName"
-], Ue = [
+], Re = [
 	"query",
 	"method",
 	"url"
-], N = /\/api\/v3\/?$/;
-function We(e, t, n) {
+], z = /\/api\/v3\/?$/;
+function ze(e, t, n) {
 	if (n) {
 		if (typeof t == "string" && "query" in n) return Promise.reject(/* @__PURE__ */ Error("[@octokit/graphql] \"query\" cannot be used as variable name"));
-		for (let e in n) if (Ue.includes(e)) return Promise.reject(/* @__PURE__ */ Error(`[@octokit/graphql] "${e}" cannot be used as variable name`));
+		for (let e in n) if (Re.includes(e)) return Promise.reject(/* @__PURE__ */ Error(`[@octokit/graphql] "${e}" cannot be used as variable name`));
 	}
-	let r = typeof t == "string" ? Object.assign({ query: t }, n) : t, i = Object.keys(r).reduce((e, t) => He.includes(t) ? (e[t] = r[t], e) : (e.variables ||= {}, e.variables[t] = r[t], e), {}), a = r.baseUrl || e.endpoint.DEFAULTS.baseUrl;
-	return N.test(a) && (i.url = a.replace(N, "/api/graphql")), e(i).then((e) => {
+	let r = typeof t == "string" ? Object.assign({ query: t }, n) : t, i = Object.keys(r).reduce((e, t) => Le.includes(t) ? (e[t] = r[t], e) : (e.variables ||= {}, e.variables[t] = r[t], e), {}), a = r.baseUrl || e.endpoint.DEFAULTS.baseUrl;
+	return z.test(a) && (i.url = a.replace(z, "/api/graphql")), e(i).then((e) => {
 		if (e.data.errors) {
 			let t = {};
 			for (let n of Object.keys(e.headers)) t[n] = e.headers[n];
-			throw new Ve(i, t, e.data);
+			throw new Ie(i, t, e.data);
 		}
 		return e.data.data;
 	});
 }
-function P(e, t) {
+function B(e, t) {
 	let n = e.defaults(t);
-	return Object.assign((e, t) => We(n, e, t), {
-		defaults: P.bind(null, n),
+	return Object.assign((e, t) => ze(n, e, t), {
+		defaults: B.bind(null, n),
 		endpoint: n.endpoint
 	});
 }
-P(M, {
-	headers: { "user-agent": `octokit-graphql.js/${ze} ${d()}` },
+B(R, {
+	headers: { "user-agent": `octokit-graphql.js/${Pe} ${f()}` },
 	method: "POST",
 	url: "/graphql"
 });
-function Ge(e) {
-	return P(e, {
+function Be(e) {
+	return B(e, {
 		method: "POST",
 		url: "/graphql"
 	});
 }
 //#endregion
 //#region node_modules/@octokit/auth-token/dist-bundle/index.js
-var F = "(?:[a-zA-Z0-9_-]+)", I = "\\.", L = RegExp(`^${F}${I}${F}${I}${F}$`), Ke = L.test.bind(L);
-async function qe(e) {
-	let t = Ke(e), n = e.startsWith("v1.") || e.startsWith("ghs_"), r = e.startsWith("ghu_");
+var V = "(?:[a-zA-Z0-9_-]+)", H = "\\.", U = RegExp(`^${V}${H}${V}${H}${V}$`), Ve = U.test.bind(U);
+async function He(e) {
+	let t = Ve(e), n = e.startsWith("v1.") || e.startsWith("ghs_"), r = e.startsWith("ghu_");
 	return {
 		type: "token",
 		token: e,
 		tokenType: t ? "app" : n ? "installation" : r ? "user-to-server" : "oauth"
 	};
 }
-function Je(e) {
+function Ue(e) {
 	return e.split(/\./).length === 3 ? `bearer ${e}` : `token ${e}`;
 }
-async function Ye(e, t, n, r) {
+async function We(e, t, n, r) {
 	let i = t.endpoint.merge(n, r);
-	return i.headers.authorization = Je(e), t(i);
+	return i.headers.authorization = Ue(e), t(i);
 }
-var Xe = function(e) {
+var Ge = function(e) {
 	if (!e) throw Error("[@octokit/auth-token] No token passed to createTokenAuth");
 	if (typeof e != "string") throw Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
-	return e = e.replace(/^(token|bearer) +/i, ""), Object.assign(qe.bind(null, e), { hook: Ye.bind(null, e) });
-}, R = "7.0.6", z = () => {}, Ze = console.warn.bind(console), Qe = console.error.bind(console);
-function $e(e = {}) {
-	return typeof e.debug != "function" && (e.debug = z), typeof e.info != "function" && (e.info = z), typeof e.warn != "function" && (e.warn = Ze), typeof e.error != "function" && (e.error = Qe), e;
+	return e = e.replace(/^(token|bearer) +/i, ""), Object.assign(He.bind(null, e), { hook: We.bind(null, e) });
+}, W = "7.0.6", Ke = () => {}, qe = console.warn.bind(console), Je = console.error.bind(console);
+function Ye(e = {}) {
+	return typeof e.debug != "function" && (e.debug = Ke), typeof e.info != "function" && (e.info = Ke), typeof e.warn != "function" && (e.warn = qe), typeof e.error != "function" && (e.error = Je), e;
 }
-var B = `octokit-core.js/${R} ${d()}`, et = class {
-	static VERSION = R;
+var Xe = `octokit-core.js/${W} ${f()}`, Ze = class {
+	static VERSION = W;
 	static defaults(e) {
 		return class extends this {
 			constructor(...t) {
@@ -531,8 +531,8 @@ var B = `octokit-core.js/${R} ${d()}`, et = class {
 		};
 	}
 	constructor(e = {}) {
-		let t = new oe.Collection(), n = {
-			baseUrl: M.endpoint.DEFAULTS.baseUrl,
+		let t = new re.Collection(), n = {
+			baseUrl: R.endpoint.DEFAULTS.baseUrl,
 			headers: {},
 			request: Object.assign({}, e.request, { hook: t.bind(null, "request") }),
 			mediaType: {
@@ -540,7 +540,7 @@ var B = `octokit-core.js/${R} ${d()}`, et = class {
 				format: ""
 			}
 		};
-		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${B}` : B, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = M.defaults(n), this.graphql = Ge(this.request).defaults(n), this.log = $e(e.log), this.hook = t, e.authStrategy) {
+		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${Xe}` : Xe, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = R.defaults(n), this.graphql = Be(this.request).defaults(n), this.log = Ye(e.log), this.hook = t, e.authStrategy) {
 			let { authStrategy: n, ...r } = e, i = n(Object.assign({
 				request: this.request,
 				log: this.log,
@@ -550,7 +550,7 @@ var B = `octokit-core.js/${R} ${d()}`, et = class {
 			t.wrap("request", i.hook), this.auth = i;
 		} else if (!e.auth) this.auth = async () => ({ type: "unauthenticated" });
 		else {
-			let n = Xe(e.auth);
+			let n = Ge(e.auth);
 			t.wrap("request", n.hook), this.auth = n;
 		}
 		let r = this.constructor;
@@ -561,10 +561,10 @@ var B = `octokit-core.js/${R} ${d()}`, et = class {
 	log;
 	hook;
 	auth;
-}, tt = "6.0.0";
+}, Qe = "6.0.0";
 //#endregion
 //#region node_modules/@octokit/plugin-request-log/dist-src/index.js
-function V(e) {
+function $e(e) {
 	e.hook.wrap("request", (t, n) => {
 		e.log.debug("request", n);
 		let r = Date.now(), i = e.request.endpoint.parse(n), a = i.url.replace(n.baseUrl, "");
@@ -577,11 +577,11 @@ function V(e) {
 		});
 	});
 }
-V.VERSION = tt;
+$e.VERSION = Qe;
 //#endregion
 //#region node_modules/@octokit/plugin-paginate-rest/dist-bundle/index.js
-var nt = "0.0.0-development";
-function rt(e) {
+var et = "0.0.0-development";
+function tt(e) {
 	if (!e.data) return {
 		...e,
 		data: []
@@ -592,12 +592,12 @@ function rt(e) {
 	let a = Object.keys(e.data)[0];
 	return e.data = e.data[a], t !== void 0 && (e.data.incomplete_results = t), n !== void 0 && (e.data.repository_selection = n), e.data.total_count = r, e.data.total_commits = i, e;
 }
-function H(e, t, n) {
+function G(e, t, n) {
 	let r = typeof t == "function" ? t.endpoint(n) : e.request.endpoint(t, n), i = typeof t == "function" ? t : e.request, a = r.method, o = r.headers, s = r.url;
 	return { [Symbol.asyncIterator]: () => ({ async next() {
 		if (!s) return { done: !0 };
 		try {
-			let e = rt(await i({
+			let e = tt(await i({
 				method: a,
 				url: s,
 				headers: o
@@ -617,27 +617,27 @@ function H(e, t, n) {
 		}
 	} }) };
 }
-function U(e, t, n, r) {
-	return typeof n == "function" && (r = n, n = void 0), W(e, [], H(e, t, n)[Symbol.asyncIterator](), r);
+function nt(e, t, n, r) {
+	return typeof n == "function" && (r = n, n = void 0), rt(e, [], G(e, t, n)[Symbol.asyncIterator](), r);
 }
-function W(e, t, n, r) {
+function rt(e, t, n, r) {
 	return n.next().then((i) => {
 		if (i.done) return t;
 		let a = !1;
 		function o() {
 			a = !0;
 		}
-		return t = t.concat(r ? r(i.value, o) : i.value.data), a ? t : W(e, t, n, r);
+		return t = t.concat(r ? r(i.value, o) : i.value.data), a ? t : rt(e, t, n, r);
 	});
 }
-Object.assign(U, { iterator: H });
-function G(e) {
-	return { paginate: Object.assign(U.bind(null, e), { iterator: H.bind(null, e) }) };
+Object.assign(nt, { iterator: G });
+function it(e) {
+	return { paginate: Object.assign(nt.bind(null, e), { iterator: G.bind(null, e) }) };
 }
-G.VERSION = nt;
+it.VERSION = et;
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/version.js
-var K = "17.0.0", it = {
+var at = "17.0.0", ot = {
 	actions: {
 		addCustomLabelsToSelfHostedRunnerForOrg: ["POST /orgs/{org}/actions/runners/{runner_id}/labels"],
 		addCustomLabelsToSelfHostedRunnerForRepo: ["POST /repos/{owner}/{repo}/actions/runners/{runner_id}/labels"],
@@ -1928,22 +1928,22 @@ var K = "17.0.0", it = {
 		unfollow: ["DELETE /user/following/{username}"],
 		updateAuthenticated: ["PATCH /user"]
 	}
-}, q = /* @__PURE__ */ new Map();
-for (let [e, t] of Object.entries(it)) for (let [n, r] of Object.entries(t)) {
+}, K = /* @__PURE__ */ new Map();
+for (let [e, t] of Object.entries(ot)) for (let [n, r] of Object.entries(t)) {
 	let [t, i, a] = r, [o, s] = t.split(/ /), c = Object.assign({
 		method: o,
 		url: s
 	}, i);
-	q.has(e) || q.set(e, /* @__PURE__ */ new Map()), q.get(e).set(n, {
+	K.has(e) || K.set(e, /* @__PURE__ */ new Map()), K.get(e).set(n, {
 		scope: e,
 		methodName: n,
 		endpointDefaults: c,
 		decorations: a
 	});
 }
-var at = {
+var st = {
 	has({ scope: e }, t) {
-		return q.get(e).has(t);
+		return K.get(e).has(t);
 	},
 	getOwnPropertyDescriptor(e, t) {
 		return {
@@ -1960,29 +1960,29 @@ var at = {
 		return delete e.cache[t], !0;
 	},
 	ownKeys({ scope: e }) {
-		return [...q.get(e).keys()];
+		return [...K.get(e).keys()];
 	},
 	set(e, t, n) {
 		return e.cache[t] = n;
 	},
 	get({ octokit: e, scope: t, cache: n }, r) {
 		if (n[r]) return n[r];
-		let i = q.get(t).get(r);
+		let i = K.get(t).get(r);
 		if (!i) return;
 		let { endpointDefaults: a, decorations: o } = i;
-		return o ? n[r] = st(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
+		return o ? n[r] = ct(e, t, r, a, o) : n[r] = e.request.defaults(a), n[r];
 	}
 };
-function ot(e) {
+function q(e) {
 	let t = {};
-	for (let n of q.keys()) t[n] = new Proxy({
+	for (let n of K.keys()) t[n] = new Proxy({
 		octokit: e,
 		scope: n,
 		cache: {}
-	}, at);
+	}, st);
 	return t;
 }
-function st(e, t, n, r, i) {
+function ct(e, t, n, r, i) {
 	let a = e.request.defaults(r);
 	function o(...r) {
 		let o = a.endpoint.merge(...r);
@@ -2005,21 +2005,21 @@ function st(e, t, n, r, i) {
 }
 //#endregion
 //#region node_modules/@octokit/plugin-rest-endpoint-methods/dist-src/index.js
-function ct(e) {
-	return { rest: ot(e) };
-}
-ct.VERSION = K;
 function lt(e) {
-	let t = ot(e);
+	return { rest: q(e) };
+}
+lt.VERSION = at;
+function ut(e) {
+	let t = q(e);
 	return {
 		...t,
 		rest: t
 	};
 }
-lt.VERSION = K;
+ut.VERSION = at;
 //#endregion
 //#region node_modules/@octokit/rest/dist-src/index.js
-var ut = et.plugin(V, lt, G).defaults({ userAgent: "octokit-rest.js/22.0.1" });
+var dt = Ze.plugin($e, ut, it).defaults({ userAgent: "octokit-rest.js/22.0.1" });
 //#endregion
 //#region electron/engine/nodeRegistry.ts
 function J(e, t) {
@@ -2037,56 +2037,66 @@ function J(e, t) {
 		return typeof o == "object" ? JSON.stringify(o) : o === void 0 ? "" : String(o);
 	}) : e;
 }
-var dt = {
+var ft = {
 	trigger: async (e, t) => (t.log(e.id, "Workflow triggered manually", "success"), {
 		triggered: !0,
 		timestamp: (/* @__PURE__ */ new Date()).toISOString()
 	}),
 	terminal: async (e, t) => {
 		let n = e.data.command || "", r = J(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a;
-		i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = J(e.data.customShell, t));
-		let o = J(n, t).split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
-		if (o.length === 0) return t.log(e.id, "No commands to execute", "warn"), {
+		i === "default" ? a = process.platform === "win32" ? void 0 : process.env.SHELL || "/bin/zsh" : i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = J(e.data.customShell, t));
+		let o = J(n, t);
+		if (!o.trim()) return t.log(e.id, "No commands to execute", "warn"), {
 			stdout: "",
 			stderr: "",
 			exitCode: 0
 		};
-		let s = null, c = !1, u = t.onCancel(() => {
-			c = !0, s && (t.log(e.id, "Killing terminal command process", "warn"), s.kill());
-		}), d = "", f = "", p = a ? ` (shell: ${a})` : "";
-		t.log(e.id, `Executing terminal commands${p} in ${r}`, "info");
+		let s = o;
+		process.platform !== "win32" && (s = "\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nelif [ -s \"$HOME/.nvm/nvm.sh\" ]; then\n  . \"$HOME/.nvm/nvm.sh\"\nelif [ -s \"/usr/local/opt/nvm/nvm.sh\" ]; then\n  . \"/usr/local/opt/nvm/nvm.sh\"\nelif [ -s \"/opt/homebrew/opt/nvm/nvm.sh\" ]; then\n  . \"/opt/homebrew/opt/nvm/nvm.sh\"\nfi\n\n" + o);
+		let c = null, u = !1, d = t.onCancel(() => {
+			u = !0, c && (t.log(e.id, "Killing terminal command process", "warn"), c.kill());
+		}), f = "", p = "", m = "", h = "", g = a ? ` (shell: ${a})` : "";
+		t.log(e.id, `Executing terminal commands${g} in ${r}`, "info");
 		try {
-			for (let n = 0; n < o.length; n++) {
-				if (c) throw Error("Terminal execution cancelled by user");
-				let i = o[n];
-				t.log(e.id, `[Line ${n + 1}/${o.length}] Executing command: ${i}`, "info");
-				let u = await new Promise((n, o) => {
-					s = l(i, {
-						cwd: r,
-						shell: a
-					}, (r, i, a) => {
-						if (s = null, i && t.log(e.id, i, "info"), a && t.log(e.id, a, "warn"), r) if (c) o(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
-						else {
-							t.log(e.id, `Command failed: ${r.message}`, "error");
-							let n = Error(r.message);
-							n.stdout = i, n.stderr = a, n.exitCode = r.code || 1, o(n);
-						}
-						else n({
-							stdout: i,
-							stderr: a,
-							exitCode: 0
-						});
+			if (u) throw Error("Terminal execution cancelled by user");
+			let n = await new Promise((n, i) => {
+				let o = l(s, {
+					cwd: r,
+					shell: a
+				}, (r, a, o) => {
+					if (c = null, m.trim() && t.log(e.id, m.trimEnd(), "info"), h.trim() && t.log(e.id, h.trimEnd(), "warn"), r) if (u) i(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
+					else {
+						t.log(e.id, `Command failed: ${r.message}`, "error");
+						let n = Error(r.message);
+						n.stdout = f, n.stderr = p, n.exitCode = r.code || 1, i(n);
+					}
+					else n({
+						stdout: f,
+						stderr: p,
+						exitCode: 0
 					});
 				});
-				d += u.stdout ? u.stdout + "\n" : "", f += u.stderr ? u.stderr + "\n" : "";
-			}
+				o.stdout?.on("data", (n) => {
+					let r = n.toString();
+					f += r, m += r;
+					let i = m.split("\n");
+					for (let n = 0; n < i.length - 1; n++) t.log(e.id, i[n].trimEnd(), "info");
+					m = i[i.length - 1];
+				}), o.stderr?.on("data", (n) => {
+					let r = n.toString();
+					p += r, h += r;
+					let i = h.split("\n");
+					for (let n = 0; n < i.length - 1; n++) t.log(e.id, i[n].trimEnd(), "warn");
+					h = i[i.length - 1];
+				}), c = o;
+			});
 			return t.log(e.id, "All commands completed successfully", "success"), {
-				stdout: d.trim(),
-				stderr: f.trim(),
+				stdout: n.stdout.trim(),
+				stderr: n.stderr.trim(),
 				exitCode: 0
 			};
 		} finally {
-			u();
+			d();
 		}
 	},
 	git: async (e, t) => {
@@ -2145,7 +2155,7 @@ var dt = {
 	github: async (e, t) => {
 		let n = e.data.operation, r = t.credentials.githubToken;
 		if (!r) throw Error("GitHub Personal Access Token (githubToken) is missing in credentials settings.");
-		let i = new ut({ auth: r }), a = J(e.data.owner || "", t), o = J(e.data.repo || "", t);
+		let i = new dt({ auth: r }), a = J(e.data.owner || "", t), o = J(e.data.repo || "", t);
 		t.log(e.id, `Starting GitHub Operation: ${n} on ${a}/${o}`, "info");
 		try {
 			if (n === "create-pr") {
@@ -2290,7 +2300,7 @@ var dt = {
 				}), d.on("close", (e) => {
 					c = null, u ? a(/* @__PURE__ */ Error("MCP execution cancelled by user")) : p || a(/* @__PURE__ */ Error(`MCP server closed prematurely with code ${e}`));
 				});
-				let ee = {
+				let m = {
 					jsonrpc: "2.0",
 					id: 1,
 					method: "tools/call",
@@ -2299,7 +2309,7 @@ var dt = {
 						arguments: s
 					}
 				};
-				t.log(e.id, "Sending JSON-RPC request to MCP stdin", "info"), d.stdin?.write(JSON.stringify(ee) + "\n");
+				t.log(e.id, "Sending JSON-RPC request to MCP stdin", "info"), d.stdin?.write(JSON.stringify(m) + "\n");
 			});
 		} finally {
 			d();
@@ -2320,7 +2330,7 @@ var dt = {
 			throw t.log(e.id, `Code execution failed: ${n.message}`, "error"), n;
 		}
 	}
-}, ft = class {
+}, pt = class {
 	isCancelled = !1;
 	isPaused = !1;
 	pausedNodeId = null;
@@ -2436,7 +2446,7 @@ var dt = {
 				}
 				this.activeNodeId = e, this.updateStatus(e, "running"), this.log(e, `Executing node: ${t.data.label || t.type}`, "info");
 				try {
-					let n = dt[t.type];
+					let n = ft[t.type];
 					if (!n) throw Error(`Executor for node type "${t.type}" not found.`);
 					let r = await n(t, l);
 					c[t.id] = r;
@@ -2467,14 +2477,14 @@ var dt = {
 			outputs: c
 		};
 	}
-}, Y = i.dirname(c(import.meta.url)), X = null, Z = null, Q = i.join(t.getPath("userData"), "workflows"), $ = i.join(t.getPath("userData"), "credentials.enc");
-o(Q) || s(Q, { recursive: !0 });
-async function pt() {
-	X = new e({
+}, mt = i.dirname(c(import.meta.url)), Y = null, X = null, Z = i.join(t.getPath("userData"), "workflows"), Q = i.join(t.getPath("userData"), "credentials.enc");
+o(Z) || s(Z, { recursive: !0 });
+async function ht() {
+	Y = new e({
 		width: 1280,
 		height: 800,
 		webPreferences: {
-			preload: i.join(Y, "preload.js"),
+			preload: i.join(mt, "preload.js"),
 			nodeIntegration: !1,
 			contextIsolation: !0
 		},
@@ -2485,61 +2495,83 @@ async function pt() {
 			height: 35
 		},
 		backgroundColor: "#09090b"
-	}), process.env.VITE_DEV_SERVER_URL ? (X.loadURL(process.env.VITE_DEV_SERVER_URL), X.webContents.openDevTools()) : X.loadFile(i.join(Y, "../dist/index.html"));
+	}), process.env.VITE_DEV_SERVER_URL ? (Y.loadURL(process.env.VITE_DEV_SERVER_URL), Y.webContents.openDevTools()) : Y.loadFile(i.join(mt, "../dist/index.html"));
+}
+function gt() {
+	if (process.platform !== "win32") try {
+		let e = u(`${process.env.SHELL || "/bin/zsh"} -l -c 'env'`, {
+			encoding: "utf-8",
+			stdio: [
+				"ignore",
+				"pipe",
+				"ignore"
+			],
+			timeout: 5e3
+		}).split("\n");
+		for (let t of e) {
+			let e = t.split("=");
+			if (e.length >= 2) {
+				let t = e[0], n = e.slice(1).join("=");
+				t && t !== "_" && t !== "PWD" && (process.env[t] = n);
+			}
+		}
+	} catch (e) {
+		console.error("Failed to load shell environment:", e);
+	}
 }
 t.whenReady().then(() => {
-	pt(), t.on("activate", () => {
-		e.getAllWindows().length === 0 && pt();
+	gt(), ht(), t.on("activate", () => {
+		e.getAllWindows().length === 0 && ht();
 	});
 }), t.on("window-all-closed", () => {
 	process.platform !== "darwin" && t.quit();
 }), n.handle("save-workflow", async (e, t, n) => {
-	let r = i.join(Q, `${t}.json`);
+	let r = i.join(Z, `${t}.json`);
 	return await a.writeFile(r, JSON.stringify(n, null, 2), "utf-8"), { success: !0 };
 }), n.handle("load-workflow", async (e, t) => {
-	let n = i.join(Q, `${t}.json`), r = await a.readFile(n, "utf-8");
+	let n = i.join(Z, `${t}.json`), r = await a.readFile(n, "utf-8");
 	return JSON.parse(r);
 }), n.handle("list-workflows", async () => {
-	let e = await a.readdir(Q), t = [];
+	let e = await a.readdir(Z), t = [];
 	for (let n of e) n.endsWith(".json") && t.push(i.basename(n, ".json"));
 	return t;
 }), n.handle("delete-workflow", async (e, t) => {
-	let n = i.join(Q, `${t}.json`);
+	let n = i.join(Z, `${t}.json`);
 	return await a.unlink(n), { success: !0 };
 }), n.handle("run-workflow", async (e, t) => {
-	if (!X) return {
+	if (!Y) return {
 		success: !1,
 		error: "No main window"
 	};
-	Z = new ft(X);
-	let n = await mt();
+	X = new pt(Y);
+	let n = await $();
 	try {
-		return await Z.execute(t, n);
+		return await X.execute(t, n);
 	} catch (e) {
 		return {
 			success: !1,
 			error: e.message
 		};
 	} finally {
-		Z = null;
+		X = null;
 	}
-}), n.handle("stop-workflow", async () => Z ? (Z.cancel(), { success: !0 }) : {
+}), n.handle("stop-workflow", async () => X ? (X.cancel(), { success: !0 }) : {
 	success: !1,
 	error: "No active workflow running"
-}), n.handle("pause-workflow", async () => Z ? (Z.pause(), { success: !0 }) : {
+}), n.handle("pause-workflow", async () => X ? (X.pause(), { success: !0 }) : {
 	success: !1,
 	error: "No active workflow running"
-}), n.handle("resume-workflow", async () => Z ? (Z.resume(), { success: !0 }) : {
+}), n.handle("resume-workflow", async () => X ? (X.resume(), { success: !0 }) : {
 	success: !1,
 	error: "No active workflow running"
-}), n.handle("proceed-workflow", async () => Z ? (Z.proceed(), { success: !0 }) : {
+}), n.handle("proceed-workflow", async () => X ? (X.proceed(), { success: !0 }) : {
 	success: !1,
 	error: "No active workflow running"
 });
-async function mt() {
+async function $() {
 	try {
-		if (!o($)) return {};
-		let e = await a.readFile($);
+		if (!o(Q)) return {};
+		let e = await a.readFile(Q);
 		if (r.isEncryptionAvailable()) try {
 			let t = r.decryptString(e);
 			return JSON.parse(t);
@@ -2551,15 +2583,15 @@ async function mt() {
 		return {};
 	}
 }
-n.handle("get-credentials", async () => await mt()), n.handle("save-credentials", async (e, t) => {
+n.handle("get-credentials", async () => await $()), n.handle("save-credentials", async (e, t) => {
 	let n = JSON.stringify(t);
 	if (r.isEncryptionAvailable()) {
 		let e = r.encryptString(n);
-		return await a.writeFile($, e), {
+		return await a.writeFile(Q, e), {
 			success: !0,
 			encrypted: !0
 		};
-	} else return await a.writeFile($, Buffer.from(n, "utf-8")), {
+	} else return await a.writeFile(Q, Buffer.from(n, "utf-8")), {
 		success: !0,
 		encrypted: !1
 	};

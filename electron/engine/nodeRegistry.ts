@@ -59,7 +59,9 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
     const shellType = node.data.shellType || 'default'
     
     let shell: string | undefined = undefined
-    if (shellType === 'bash') {
+    if (shellType === 'default') {
+      shell = process.platform === 'win32' ? undefined : (process.env.SHELL || '/bin/zsh')
+    } else if (shellType === 'bash') {
       shell = 'bash'
     } else if (shellType === 'zsh') {
       shell = 'zsh'
@@ -72,11 +74,26 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
     }
 
     const resolvedCommand = resolveVariables(rawCommand, context)
-    const lines = resolvedCommand.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
 
-    if (lines.length === 0) {
+    if (!resolvedCommand.trim()) {
       context.log(node.id, `No commands to execute`, 'warn')
       return { stdout: '', stderr: '', exitCode: 0 }
+    }
+
+    let commandToRun = resolvedCommand
+    if (process.platform !== 'win32') {
+      const nvmSource = `
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  . "$NVM_DIR/nvm.sh"
+elif [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh"
+elif [ -s "/usr/local/opt/nvm/nvm.sh" ]; then
+  . "/usr/local/opt/nvm/nvm.sh"
+elif [ -s "/opt/homebrew/opt/nvm/nvm.sh" ]; then
+  . "/opt/homebrew/opt/nvm/nvm.sh"
+fi
+`
+      commandToRun = nvmSource + '\n' + resolvedCommand
     }
 
     let activeProcess: any = null
@@ -92,54 +109,74 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
 
     let accumulatedStdout = ''
     let accumulatedStderr = ''
+    let stdoutBuffer = ''
+    let stderrBuffer = ''
 
     const shellDisplay = shell ? ` (shell: ${shell})` : ''
     context.log(node.id, `Executing terminal commands${shellDisplay} in ${cwd}`, 'info')
 
     try {
-      for (let i = 0; i < lines.length; i++) {
-        if (wasCancelled) {
-          throw new Error('Terminal execution cancelled by user')
-        }
+      if (wasCancelled) {
+        throw new Error('Terminal execution cancelled by user')
+      }
 
-        const line = lines[i]
-        context.log(node.id, `[Line ${i + 1}/${lines.length}] Executing command: ${line}`, 'info')
+      const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
+        const proc = exec(commandToRun, { cwd, shell }, (error, stdout, stderr) => {
+          activeProcess = null
+          
+          // Log any remaining buffered text
+          if (stdoutBuffer.trim()) {
+            context.log(node.id, stdoutBuffer.trimEnd(), 'info')
+          }
+          if (stderrBuffer.trim()) {
+            context.log(node.id, stderrBuffer.trimEnd(), 'warn')
+          }
 
-        const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
-          const proc = exec(line, { cwd, shell }, (error, stdout, stderr) => {
-            activeProcess = null
-            if (stdout) {
-              context.log(node.id, stdout, 'info')
-            }
-            if (stderr) {
-              context.log(node.id, stderr, 'warn')
-            }
-            if (error) {
-              if (wasCancelled) {
-                reject(new Error('Terminal execution cancelled by user'))
-              } else {
-                context.log(node.id, `Command failed: ${error.message}`, 'error')
-                const errObj = new Error(error.message) as any
-                errObj.stdout = stdout
-                errObj.stderr = stderr
-                errObj.exitCode = error.code || 1
-                reject(errObj)
-              }
+          if (error) {
+            if (wasCancelled) {
+              reject(new Error('Terminal execution cancelled by user'))
             } else {
-              resolve({ stdout, stderr, exitCode: 0 })
+              context.log(node.id, `Command failed: ${error.message}`, 'error')
+              const errObj = new Error(error.message) as any
+              errObj.stdout = accumulatedStdout
+              errObj.stderr = accumulatedStderr
+              errObj.exitCode = error.code || 1
+              reject(errObj)
             }
-          })
-          activeProcess = proc
+          } else {
+            resolve({ stdout: accumulatedStdout, stderr: accumulatedStderr, exitCode: 0 })
+          }
         })
 
-        accumulatedStdout += (result.stdout ? result.stdout + '\n' : '')
-        accumulatedStderr += (result.stderr ? result.stderr + '\n' : '')
-      }
+        proc.stdout?.on('data', (data) => {
+          const str = data.toString()
+          accumulatedStdout += str
+          stdoutBuffer += str
+          const lines = stdoutBuffer.split('\n')
+          for (let i = 0; i < lines.length - 1; i++) {
+            context.log(node.id, lines[i].trimEnd(), 'info')
+          }
+          stdoutBuffer = lines[lines.length - 1]
+        })
+
+        proc.stderr?.on('data', (data) => {
+          const str = data.toString()
+          accumulatedStderr += str
+          stderrBuffer += str
+          const lines = stderrBuffer.split('\n')
+          for (let i = 0; i < lines.length - 1; i++) {
+            context.log(node.id, lines[i].trimEnd(), 'warn')
+          }
+          stderrBuffer = lines[lines.length - 1]
+        })
+
+        activeProcess = proc
+      })
 
       context.log(node.id, `All commands completed successfully`, 'success')
       return {
-        stdout: accumulatedStdout.trim(),
-        stderr: accumulatedStderr.trim(),
+        stdout: result.stdout.trim(),
+        stderr: result.stderr.trim(),
         exitCode: 0
       }
     } finally {

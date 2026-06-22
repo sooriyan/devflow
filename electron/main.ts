@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { existsSync, mkdirSync } from 'fs'
 import { fileURLToPath } from 'url'
+import { execSync } from 'child_process'
 import { WorkflowExecutor } from './engine/executor'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -45,7 +46,35 @@ async function createWindow() {
   }
 }
 
+function loadShellEnv() {
+  if (process.platform === 'win32') {
+    return
+  }
+  try {
+    const shell = process.env.SHELL || '/bin/zsh'
+    const stdout = execSync(`${shell} -l -c 'env'`, {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 5000
+    })
+    const lines = stdout.split('\n')
+    for (const line of lines) {
+      const parts = line.split('=')
+      if (parts.length >= 2) {
+        const key = parts[0]
+        const value = parts.slice(1).join('=')
+        if (key && key !== '_' && key !== 'PWD') {
+          process.env[key] = value
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load shell environment:', err)
+  }
+}
+
 app.whenReady().then(() => {
+  loadShellEnv()
   createWindow()
 
   app.on('activate', () => {
