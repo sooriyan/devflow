@@ -134,7 +134,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (type === 'trigger') {
       label = 'Manual Trigger'
     } else if (type === 'terminal') {
-      defaultData = { command: 'echo "Hello World!"', cwd: '' }
+      defaultData = { command: 'echo "Hello World!"', cwd: '', showLogs: false }
     } else if (type === 'git') {
       defaultData = { operation: 'branch', branchName: '', commitMessage: '', commitHash: '', remote: 'origin', cwd: '' }
     } else if (type === 'github') {
@@ -224,7 +224,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }
   },
 
-  addLog: (log) => set((state) => ({ logs: [...state.logs, log] })),
+  addLog: (log) => set((state) => {
+    const nextLogs = [...state.logs, log]
+    if (nextLogs.length > 1000) {
+      return { logs: nextLogs.slice(nextLogs.length - 1000) }
+    }
+    return { logs: nextLogs }
+  }),
 
   updateNodeStatus: (nodeId, statusState) => {
     set((state) => ({

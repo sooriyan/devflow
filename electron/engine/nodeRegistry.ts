@@ -57,6 +57,7 @@ export const nodeExecutors: Record<string, (node: any, context: ExecutionContext
     const rawCommand = node.data.command || ''
     const cwd = resolveVariables(node.data.cwd || '', context) || process.cwd()
     const shellType = node.data.shellType || 'default'
+    const showLogs = node.data.showLogs === true
     
     let shell: string | undefined = undefined
     if (shellType === 'default') {
@@ -125,11 +126,13 @@ fi
           activeProcess = null
           
           // Log any remaining buffered text
-          if (stdoutBuffer.trim()) {
-            context.log(node.id, stdoutBuffer.trimEnd(), 'info')
-          }
-          if (stderrBuffer.trim()) {
-            context.log(node.id, stderrBuffer.trimEnd(), 'warn')
+          if (showLogs) {
+            if (stdoutBuffer.trim()) {
+              context.log(node.id, stdoutBuffer.trimEnd(), 'info')
+            }
+            if (stderrBuffer.trim()) {
+              context.log(node.id, stderrBuffer.trimEnd(), 'warn')
+            }
           }
 
           if (error) {
@@ -150,24 +153,42 @@ fi
 
         proc.stdout?.on('data', (data) => {
           const str = data.toString()
-          accumulatedStdout += str
-          stdoutBuffer += str
-          const lines = stdoutBuffer.split('\n')
-          for (let i = 0; i < lines.length - 1; i++) {
-            context.log(node.id, lines[i].trimEnd(), 'info')
+          
+          // Cap accumulated buffer to 10MB to avoid Main Process OOM
+          if (accumulatedStdout.length < 10 * 1024 * 1024) {
+            accumulatedStdout += str
+          } else if (!accumulatedStdout.endsWith('\n[Output truncated due to size limit]')) {
+            accumulatedStdout += '\n[Output truncated due to size limit]'
           }
-          stdoutBuffer = lines[lines.length - 1]
+
+          if (showLogs) {
+            stdoutBuffer += str
+            const lines = stdoutBuffer.split('\n')
+            for (let i = 0; i < lines.length - 1; i++) {
+              context.log(node.id, lines[i].trimEnd(), 'info')
+            }
+            stdoutBuffer = lines[lines.length - 1]
+          }
         })
 
         proc.stderr?.on('data', (data) => {
           const str = data.toString()
-          accumulatedStderr += str
-          stderrBuffer += str
-          const lines = stderrBuffer.split('\n')
-          for (let i = 0; i < lines.length - 1; i++) {
-            context.log(node.id, lines[i].trimEnd(), 'warn')
+
+          // Cap accumulated buffer to 10MB to avoid Main Process OOM
+          if (accumulatedStderr.length < 10 * 1024 * 1024) {
+            accumulatedStderr += str
+          } else if (!accumulatedStderr.endsWith('\n[Output truncated due to size limit]')) {
+            accumulatedStderr += '\n[Output truncated due to size limit]'
           }
-          stderrBuffer = lines[lines.length - 1]
+
+          if (showLogs) {
+            stderrBuffer += str
+            const lines = stderrBuffer.split('\n')
+            for (let i = 0; i < lines.length - 1; i++) {
+              context.log(node.id, lines[i].trimEnd(), 'warn')
+            }
+            stderrBuffer = lines[lines.length - 1]
+          }
         })
 
         activeProcess = proc

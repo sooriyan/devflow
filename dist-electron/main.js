@@ -38,9 +38,9 @@ function g(e, t, n) {
 }
 //#endregion
 //#region node_modules/before-after-hook/index.js
-var ee = Function.bind, te = ee.bind(ee);
-function ne(e, t, n) {
-	let r = te(g, null).apply(null, n ? [t, n] : [t]);
+var _ = Function.bind, v = _.bind(_);
+function ee(e, t, n) {
+	let r = v(g, null).apply(null, n ? [t, n] : [t]);
 	e.api = { remove: r }, e.remove = r, [
 		"before",
 		"error",
@@ -52,21 +52,21 @@ function ne(e, t, n) {
 			r,
 			n
 		] : [t, r];
-		e[r] = e.api[r] = te(h, null).apply(null, i);
+		e[r] = e.api[r] = v(h, null).apply(null, i);
 	});
 }
-function re() {
+function te() {
 	let e = Symbol("Singular"), t = { registry: {} }, n = m.bind(null, t, e);
-	return ne(n, t, e), n;
+	return ee(n, t, e), n;
 }
-function ie() {
+function ne() {
 	let e = { registry: {} }, t = m.bind(null, e);
-	return ne(t, e), t;
+	return ee(t, e), t;
 }
-var ae = {
-	Singular: re,
-	Collection: ie
-}, oe = {
+var re = {
+	Singular: te,
+	Collection: ne
+}, ie = {
 	method: "GET",
 	baseUrl: "https://api.github.com",
 	headers: {
@@ -75,27 +75,27 @@ var ae = {
 	},
 	mediaType: { format: "" }
 };
-function se(e) {
+function ae(e) {
 	return e ? Object.keys(e).reduce((t, n) => (t[n.toLowerCase()] = e[n], t), {}) : {};
 }
-function ce(e) {
+function oe(e) {
 	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
 	let t = Object.getPrototypeOf(e);
 	if (t === null) return !0;
 	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
 	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-function _(e, t) {
+function y(e, t) {
 	let n = Object.assign({}, e);
 	return Object.keys(t).forEach((r) => {
-		ce(t[r]) && r in e ? n[r] = _(e[r], t[r]) : Object.assign(n, { [r]: t[r] });
+		oe(t[r]) && r in e ? n[r] = y(e[r], t[r]) : Object.assign(n, { [r]: t[r] });
 	}), n;
 }
-function v(e) {
+function b(e) {
 	for (let t in e) e[t] === void 0 && delete e[t];
 	return e;
 }
-function y(e, t, n) {
+function x(e, t, n) {
 	if (typeof t == "string") {
 		let [e, r] = t.split(" ");
 		n = Object.assign(r ? {
@@ -103,69 +103,69 @@ function y(e, t, n) {
 			url: r
 		} : { url: e }, n);
 	} else n = Object.assign({}, t);
-	n.headers = se(n.headers), v(n), v(n.headers);
-	let r = _(e || {}, n);
+	n.headers = ae(n.headers), b(n), b(n.headers);
+	let r = y(e || {}, n);
 	return n.url === "/graphql" && (e && e.mediaType.previews?.length && (r.mediaType.previews = e.mediaType.previews.filter((e) => !r.mediaType.previews.includes(e)).concat(r.mediaType.previews)), r.mediaType.previews = (r.mediaType.previews || []).map((e) => e.replace(/-preview/, ""))), r;
 }
-function le(e, t) {
+function se(e, t) {
 	let n = /\?/.test(e) ? "&" : "?", r = Object.keys(t);
 	return r.length === 0 ? e : e + n + r.map((e) => e === "q" ? "q=" + t.q.split("+").map(encodeURIComponent).join("+") : `${e}=${encodeURIComponent(t[e])}`).join("&");
 }
-var ue = /\{[^{}}]+\}/g;
-function de(e) {
+var ce = /\{[^{}}]+\}/g;
+function le(e) {
 	return e.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
-function fe(e) {
-	let t = e.match(ue);
-	return t ? t.map(de).reduce((e, t) => e.concat(t), []) : [];
+function ue(e) {
+	let t = e.match(ce);
+	return t ? t.map(le).reduce((e, t) => e.concat(t), []) : [];
 }
-function pe(e, t) {
+function de(e, t) {
 	let n = { __proto__: null };
 	for (let r of Object.keys(e)) t.indexOf(r) === -1 && (n[r] = e[r]);
 	return n;
 }
-function me(e) {
+function fe(e) {
 	return e.split(/(%[0-9A-Fa-f]{2})/g).map(function(e) {
 		return /%[0-9A-Fa-f]/.test(e) || (e = encodeURI(e).replace(/%5B/g, "[").replace(/%5D/g, "]")), e;
 	}).join("");
 }
-function b(e) {
+function S(e) {
 	return encodeURIComponent(e).replace(/[!'()*]/g, function(e) {
 		return "%" + e.charCodeAt(0).toString(16).toUpperCase();
 	});
 }
-function x(e, t, n) {
-	return t = e === "+" || e === "#" ? me(t) : b(t), n ? b(n) + "=" + t : t;
+function C(e, t, n) {
+	return t = e === "+" || e === "#" ? fe(t) : S(t), n ? S(n) + "=" + t : t;
 }
-function S(e) {
+function w(e) {
 	return e != null;
 }
-function C(e) {
+function T(e) {
 	return e === ";" || e === "&" || e === "?";
 }
-function he(e, t, n, r) {
+function pe(e, t, n, r) {
 	var i = e[n], a = [];
-	if (S(i) && i !== "") if (typeof i == "string" || typeof i == "number" || typeof i == "bigint" || typeof i == "boolean") i = i.toString(), r && r !== "*" && (i = i.substring(0, parseInt(r, 10))), a.push(x(t, i, C(t) ? n : ""));
-	else if (r === "*") Array.isArray(i) ? i.filter(S).forEach(function(e) {
-		a.push(x(t, e, C(t) ? n : ""));
+	if (w(i) && i !== "") if (typeof i == "string" || typeof i == "number" || typeof i == "bigint" || typeof i == "boolean") i = i.toString(), r && r !== "*" && (i = i.substring(0, parseInt(r, 10))), a.push(C(t, i, T(t) ? n : ""));
+	else if (r === "*") Array.isArray(i) ? i.filter(w).forEach(function(e) {
+		a.push(C(t, e, T(t) ? n : ""));
 	}) : Object.keys(i).forEach(function(e) {
-		S(i[e]) && a.push(x(t, i[e], e));
+		w(i[e]) && a.push(C(t, i[e], e));
 	});
 	else {
 		let e = [];
-		Array.isArray(i) ? i.filter(S).forEach(function(n) {
-			e.push(x(t, n));
+		Array.isArray(i) ? i.filter(w).forEach(function(n) {
+			e.push(C(t, n));
 		}) : Object.keys(i).forEach(function(n) {
-			S(i[n]) && (e.push(b(n)), e.push(x(t, i[n].toString())));
-		}), C(t) ? a.push(b(n) + "=" + e.join(",")) : e.length !== 0 && a.push(e.join(","));
+			w(i[n]) && (e.push(S(n)), e.push(C(t, i[n].toString())));
+		}), T(t) ? a.push(S(n) + "=" + e.join(",")) : e.length !== 0 && a.push(e.join(","));
 	}
-	else t === ";" ? S(i) && a.push(b(n)) : i === "" && (t === "&" || t === "?") ? a.push(b(n) + "=") : i === "" && a.push("");
+	else t === ";" ? w(i) && a.push(S(n)) : i === "" && (t === "&" || t === "?") ? a.push(S(n) + "=") : i === "" && a.push("");
 	return a;
 }
-function ge(e) {
-	return { expand: _e.bind(null, e) };
+function me(e) {
+	return { expand: he.bind(null, e) };
 }
-function _e(e, t) {
+function he(e, t) {
 	var n = [
 		"+",
 		"#",
@@ -180,44 +180,44 @@ function _e(e, t) {
 			let e = "", i = [];
 			if (n.indexOf(r.charAt(0)) !== -1 && (e = r.charAt(0), r = r.substr(1)), r.split(/,/g).forEach(function(n) {
 				var r = /([^:\*]*)(?::(\d+)|(\*))?/.exec(n);
-				i.push(he(t, e, r[1], r[2] || r[3]));
+				i.push(pe(t, e, r[1], r[2] || r[3]));
 			}), e && e !== "+") {
 				var a = ",";
 				return e === "?" ? a = "&" : e !== "#" && (a = e), (i.length === 0 ? "" : e) + i.join(a);
 			} else return i.join(",");
-		} else return me(i);
+		} else return fe(i);
 	}), e === "/" ? e : e.replace(/\/$/, "");
 }
-function w(e) {
-	let t = e.method.toUpperCase(), n = (e.url || "/").replace(/:([a-z]\w+)/g, "{$1}"), r = Object.assign({}, e.headers), i, a = pe(e, [
+function E(e) {
+	let t = e.method.toUpperCase(), n = (e.url || "/").replace(/:([a-z]\w+)/g, "{$1}"), r = Object.assign({}, e.headers), i, a = de(e, [
 		"method",
 		"baseUrl",
 		"url",
 		"headers",
 		"request",
 		"mediaType"
-	]), o = fe(n);
-	n = ge(n).expand(a), /^http/.test(n) || (n = e.baseUrl + n);
-	let s = pe(a, Object.keys(e).filter((e) => o.includes(e)).concat("baseUrl"));
-	return /application\/octet-stream/i.test(r.accept) || (e.mediaType.format && (r.accept = r.accept.split(/,/).map((t) => t.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${e.mediaType.format}`)).join(",")), n.endsWith("/graphql") && e.mediaType.previews?.length && (r.accept = (r.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(e.mediaType.previews).map((t) => `application/vnd.github.${t}-preview${e.mediaType.format ? `.${e.mediaType.format}` : "+json"}`).join(","))), ["GET", "HEAD"].includes(t) ? n = le(n, s) : "data" in s ? i = s.data : Object.keys(s).length && (i = s), !r["content-type"] && i !== void 0 && (r["content-type"] = "application/json; charset=utf-8"), ["PATCH", "PUT"].includes(t) && i === void 0 && (i = ""), Object.assign({
+	]), o = ue(n);
+	n = me(n).expand(a), /^http/.test(n) || (n = e.baseUrl + n);
+	let s = de(a, Object.keys(e).filter((e) => o.includes(e)).concat("baseUrl"));
+	return /application\/octet-stream/i.test(r.accept) || (e.mediaType.format && (r.accept = r.accept.split(/,/).map((t) => t.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${e.mediaType.format}`)).join(",")), n.endsWith("/graphql") && e.mediaType.previews?.length && (r.accept = (r.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(e.mediaType.previews).map((t) => `application/vnd.github.${t}-preview${e.mediaType.format ? `.${e.mediaType.format}` : "+json"}`).join(","))), ["GET", "HEAD"].includes(t) ? n = se(n, s) : "data" in s ? i = s.data : Object.keys(s).length && (i = s), !r["content-type"] && i !== void 0 && (r["content-type"] = "application/json; charset=utf-8"), ["PATCH", "PUT"].includes(t) && i === void 0 && (i = ""), Object.assign({
 		method: t,
 		url: n,
 		headers: r
 	}, i === void 0 ? null : { body: i }, e.request ? { request: e.request } : null);
 }
-function ve(e, t, n) {
-	return w(y(e, t, n));
+function ge(e, t, n) {
+	return E(x(e, t, n));
 }
-function T(e, t) {
-	let n = y(e, t), r = ve.bind(null, n);
+function D(e, t) {
+	let n = x(e, t), r = ge.bind(null, n);
 	return Object.assign(r, {
 		DEFAULTS: n,
-		defaults: T.bind(null, n),
-		merge: y.bind(null, n),
-		parse: w
+		defaults: D.bind(null, n),
+		merge: x.bind(null, n),
+		parse: E
 	});
 }
-var ye = T(null, oe), be = (/* @__PURE__ */ f(((e) => {
+var _e = D(null, ie), ve = (/* @__PURE__ */ f(((e) => {
 	Object.defineProperty(e, "__esModule", { value: !0 }), e.parse = n;
 	var t = /* @__PURE__ */ (() => {
 		let e = function() {};
@@ -292,24 +292,24 @@ var ye = T(null, oe), be = (/* @__PURE__ */ f(((e) => {
 		}
 		return n;
 	}
-})))(), xe = /^-?\d+$/, E = /^-?\d+n+$/, D = JSON.stringify, O = JSON.parse, Se = /^-?\d+n$/, Ce = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, we = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Te = (e, t, n) => "rawJSON" in JSON ? D(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? D(e, (e, n) => typeof n == "string" && E.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(Ce, "$1$2$3").replace(we, "$1$2$3") : D(e, t, n), k = /* @__PURE__ */ new Map(), Ee = () => {
+})))(), ye = /^-?\d+$/, O = /^-?\d+n+$/, k = JSON.stringify, A = JSON.parse, be = /^-?\d+n$/, xe = /([\[:])?"(-?\d+)n"($|([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Se = /([\[:])?("-?\d+n+)n("$|"([\\n]|\s)*(\s|[\\n])*[,\}\]])/g, Ce = (e, t, n) => "rawJSON" in JSON ? k(e, (e, n) => typeof n == "bigint" ? JSON.rawJSON(n.toString()) : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n) : e ? k(e, (e, n) => typeof n == "string" && O.test(n) || typeof n == "bigint" ? n.toString() + "n" : typeof t == "function" ? t(e, n) : (Array.isArray(t) && t.includes(e), n), n).replace(xe, "$1$2$3").replace(Se, "$1$2$3") : k(e, t, n), j = /* @__PURE__ */ new Map(), we = () => {
 	let e = JSON.parse.toString();
-	if (k.has(e)) return k.get(e);
+	if (j.has(e)) return j.get(e);
 	try {
 		let t = JSON.parse("1", (e, t, n) => !!n?.source && n.source === "1");
-		return k.set(e, t), t;
+		return j.set(e, t), t;
 	} catch {
-		return k.set(e, !1), !1;
+		return j.set(e, !1), !1;
 	}
-}, De = (e, t, n, r) => typeof t == "string" && Se.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && E.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, Oe = (e, t) => JSON.parse(e, (e, n, r) => {
-	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && xe.test(r.source);
+}, Te = (e, t, n, r) => typeof t == "string" && be.test(t) ? BigInt(t.slice(0, -1)) : typeof t == "string" && O.test(t) ? t.slice(0, -1) : typeof r == "function" ? r(e, t, n) : t, Ee = (e, t) => JSON.parse(e, (e, n, r) => {
+	let i = typeof n == "number" && (n > 2 ** 53 - 1 || n < -(2 ** 53 - 1)), a = r && ye.test(r.source);
 	return i && a ? BigInt(r.source) : typeof t == "function" ? t(e, n, r) : n;
-}), A = (2 ** 53 - 1).toString(), j = A.length, ke = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Ae = /^"-?\d+n+"$/, je = (e, t) => e ? Ee() ? Oe(e, t) : O(e.replace(ke, (e, t, n, r) => {
+}), M = (2 ** 53 - 1).toString(), N = M.length, De = /"(?:\\.|[^"])*"|-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/g, Oe = /^"-?\d+n+"$/, ke = (e, t) => e ? we() ? Ee(e, t) : A(e.replace(De, (e, t, n, r) => {
 	let i = e[0] === "\"";
-	if (i && Ae.test(e)) return e.substring(0, e.length - 1) + "n\"";
-	let a = n || r, o = t && (t.length < j || t.length === j && t <= A);
+	if (i && Oe.test(e)) return e.substring(0, e.length - 1) + "n\"";
+	let a = n || r, o = t && (t.length < N || t.length === N && t <= M);
 	return i || a || o ? e : "\"" + e + "n\"";
-}), (e, n, r) => De(e, n, r, t)) : O(e, t), M = class extends Error {
+}), (e, n, r) => Te(e, n, r, t)) : A(e, t), P = class extends Error {
 	name;
 	status;
 	request;
@@ -320,19 +320,19 @@ var ye = T(null, oe), be = (/* @__PURE__ */ f(((e) => {
 		let r = Object.assign({}, n.request);
 		n.request.headers.authorization && (r.headers = Object.assign({}, n.request.headers, { authorization: n.request.headers.authorization.replace(/(?<! ) .*$/, " [REDACTED]") })), r.url = r.url.replace(/\bclient_secret=\w+/g, "client_secret=[REDACTED]").replace(/\baccess_token=\w+/g, "access_token=[REDACTED]"), this.request = r;
 	}
-}, Me = { headers: { "user-agent": `octokit-request.js/10.0.10 ${p()}` } };
-function Ne(e) {
+}, Ae = { headers: { "user-agent": `octokit-request.js/10.0.10 ${p()}` } };
+function je(e) {
 	if (typeof e != "object" || !e || Object.prototype.toString.call(e) !== "[object Object]") return !1;
 	let t = Object.getPrototypeOf(e);
 	if (t === null) return !0;
 	let n = Object.prototype.hasOwnProperty.call(t, "constructor") && t.constructor;
 	return typeof n == "function" && n instanceof n && Function.prototype.call(n) === Function.prototype.call(e);
 }
-var N = () => "";
-async function P(e) {
+var F = () => "";
+async function I(e) {
 	let t = e.request?.fetch || globalThis.fetch;
 	if (!t) throw Error("fetch is not set. Please pass a fetch implementation as new Octokit({ request: { fetch }}). Learn more at https://github.com/octokit/octokit.js/#fetch-missing");
-	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = Ne(e.body) || Array.isArray(e.body) ? Te(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
+	let n = e.request?.log || console, r = e.request?.parseSuccessResponseBody !== !1, i = je(e.body) || Array.isArray(e.body) ? Ce(e.body) : e.body, a = Object.fromEntries(Object.entries(e.headers).map(([e, t]) => [e, String(t)])), o;
 	try {
 		o = await t(e.url, {
 			method: e.method,
@@ -348,7 +348,7 @@ async function P(e) {
 			if (t.name === "AbortError") throw t.status = 500, t;
 			n = t.message, t.name === "TypeError" && "cause" in t && (t.cause instanceof Error ? n = t.cause.message : typeof t.cause == "string" && (n = t.cause));
 		}
-		let r = new M(n, 500, { request: e });
+		let r = new P(n, 500, { request: e });
 		throw r.cause = t, r;
 	}
 	let s = o.status, c = o.url, l = {};
@@ -366,42 +366,42 @@ async function P(e) {
 	if (s === 204 || s === 205) return u;
 	if (e.method === "HEAD") {
 		if (s < 400) return u;
-		throw new M(o.statusText, s, {
+		throw new P(o.statusText, s, {
 			response: u,
 			request: e
 		});
 	}
-	if (s === 304) throw u.data = await F(o), new M("Not modified", s, {
+	if (s === 304) throw u.data = await L(o), new P("Not modified", s, {
 		response: u,
 		request: e
 	});
-	if (s >= 400) throw u.data = await F(o), new M(Fe(u.data), s, {
+	if (s >= 400) throw u.data = await L(o), new P(Ne(u.data), s, {
 		response: u,
 		request: e
 	});
-	return u.data = r ? await F(o) : o.body, u;
+	return u.data = r ? await L(o) : o.body, u;
 }
-async function F(e) {
+async function L(e) {
 	let t = e.headers.get("content-type");
-	if (!t) return e.text().catch(N);
-	let n = (0, be.parse)(t);
-	if (Pe(n)) {
+	if (!t) return e.text().catch(F);
+	let n = (0, ve.parse)(t);
+	if (Me(n)) {
 		let t = "";
 		try {
-			return t = await e.text(), je(t);
+			return t = await e.text(), ke(t);
 		} catch {
 			return t;
 		}
-	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(N);
+	} else if (n.type.startsWith("text/") || n.parameters.charset?.toLowerCase() === "utf-8") return e.text().catch(F);
 	else return e.arrayBuffer().catch(
 		/* v8 ignore next -- @preserve */
 		() => /* @__PURE__ */ new ArrayBuffer(0)
 	);
 }
-function Pe(e) {
+function Me(e) {
 	return e.type === "application/json" || e.type === "application/scim+json";
 }
-function Fe(e) {
+function Ne(e) {
 	if (typeof e == "string") return e;
 	if (e instanceof ArrayBuffer) return "Unknown error";
 	if ("message" in e) {
@@ -410,33 +410,33 @@ function Fe(e) {
 	}
 	return `Unknown error: ${JSON.stringify(e)}`;
 }
-function I(e, t) {
+function R(e, t) {
 	let n = e.defaults(t);
 	return Object.assign(function(e, t) {
 		let r = n.merge(e, t);
-		if (!r.request || !r.request.hook) return P(n.parse(r));
-		let i = (e, t) => P(n.parse(n.merge(e, t)));
+		if (!r.request || !r.request.hook) return I(n.parse(r));
+		let i = (e, t) => I(n.parse(n.merge(e, t)));
 		return Object.assign(i, {
 			endpoint: n,
-			defaults: I.bind(null, n)
+			defaults: R.bind(null, n)
 		}), r.request.hook(i, r);
 	}, {
 		endpoint: n,
-		defaults: I.bind(null, n)
+		defaults: R.bind(null, n)
 	});
 }
-var L = I(ye, Me), Ie = "0.0.0-development";
-function Le(e) {
+var z = R(_e, Ae), Pe = "0.0.0-development";
+function Fe(e) {
 	return "Request failed due to following response errors:\n" + e.errors.map((e) => ` - ${e.message}`).join("\n");
 }
-var Re = class extends Error {
+var Ie = class extends Error {
 	constructor(e, t, n) {
-		super(Le(n)), this.request = e, this.headers = t, this.response = n, this.errors = n.errors, this.data = n.data, Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
+		super(Fe(n)), this.request = e, this.headers = t, this.response = n, this.errors = n.errors, this.data = n.data, Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
 	}
 	name = "GraphqlResponseError";
 	errors;
 	data;
-}, ze = [
+}, Le = [
 	"method",
 	"baseUrl",
 	"url",
@@ -445,72 +445,72 @@ var Re = class extends Error {
 	"query",
 	"mediaType",
 	"operationName"
-], Be = [
+], Re = [
 	"query",
 	"method",
 	"url"
-], R = /\/api\/v3\/?$/;
-function Ve(e, t, n) {
+], B = /\/api\/v3\/?$/;
+function ze(e, t, n) {
 	if (n) {
 		if (typeof t == "string" && "query" in n) return Promise.reject(/* @__PURE__ */ Error("[@octokit/graphql] \"query\" cannot be used as variable name"));
-		for (let e in n) if (Be.includes(e)) return Promise.reject(/* @__PURE__ */ Error(`[@octokit/graphql] "${e}" cannot be used as variable name`));
+		for (let e in n) if (Re.includes(e)) return Promise.reject(/* @__PURE__ */ Error(`[@octokit/graphql] "${e}" cannot be used as variable name`));
 	}
-	let r = typeof t == "string" ? Object.assign({ query: t }, n) : t, i = Object.keys(r).reduce((e, t) => ze.includes(t) ? (e[t] = r[t], e) : (e.variables ||= {}, e.variables[t] = r[t], e), {}), a = r.baseUrl || e.endpoint.DEFAULTS.baseUrl;
-	return R.test(a) && (i.url = a.replace(R, "/api/graphql")), e(i).then((e) => {
+	let r = typeof t == "string" ? Object.assign({ query: t }, n) : t, i = Object.keys(r).reduce((e, t) => Le.includes(t) ? (e[t] = r[t], e) : (e.variables ||= {}, e.variables[t] = r[t], e), {}), a = r.baseUrl || e.endpoint.DEFAULTS.baseUrl;
+	return B.test(a) && (i.url = a.replace(B, "/api/graphql")), e(i).then((e) => {
 		if (e.data.errors) {
 			let t = {};
 			for (let n of Object.keys(e.headers)) t[n] = e.headers[n];
-			throw new Re(i, t, e.data);
+			throw new Ie(i, t, e.data);
 		}
 		return e.data.data;
 	});
 }
-function z(e, t) {
+function V(e, t) {
 	let n = e.defaults(t);
-	return Object.assign((e, t) => Ve(n, e, t), {
-		defaults: z.bind(null, n),
+	return Object.assign((e, t) => ze(n, e, t), {
+		defaults: V.bind(null, n),
 		endpoint: n.endpoint
 	});
 }
-z(L, {
-	headers: { "user-agent": `octokit-graphql.js/${Ie} ${p()}` },
+V(z, {
+	headers: { "user-agent": `octokit-graphql.js/${Pe} ${p()}` },
 	method: "POST",
 	url: "/graphql"
 });
-function He(e) {
-	return z(e, {
+function Be(e) {
+	return V(e, {
 		method: "POST",
 		url: "/graphql"
 	});
 }
 //#endregion
 //#region node_modules/@octokit/auth-token/dist-bundle/index.js
-var B = "(?:[a-zA-Z0-9_-]+)", V = "\\.", H = RegExp(`^${B}${V}${B}${V}${B}$`), Ue = H.test.bind(H);
-async function We(e) {
-	let t = Ue(e), n = e.startsWith("v1.") || e.startsWith("ghs_"), r = e.startsWith("ghu_");
+var H = "(?:[a-zA-Z0-9_-]+)", U = "\\.", W = RegExp(`^${H}${U}${H}${U}${H}$`), Ve = W.test.bind(W);
+async function He(e) {
+	let t = Ve(e), n = e.startsWith("v1.") || e.startsWith("ghs_"), r = e.startsWith("ghu_");
 	return {
 		type: "token",
 		token: e,
 		tokenType: t ? "app" : n ? "installation" : r ? "user-to-server" : "oauth"
 	};
 }
-function Ge(e) {
+function Ue(e) {
 	return e.split(/\./).length === 3 ? `bearer ${e}` : `token ${e}`;
 }
-async function Ke(e, t, n, r) {
+async function We(e, t, n, r) {
 	let i = t.endpoint.merge(n, r);
-	return i.headers.authorization = Ge(e), t(i);
+	return i.headers.authorization = Ue(e), t(i);
 }
-var qe = function(e) {
+var Ge = function(e) {
 	if (!e) throw Error("[@octokit/auth-token] No token passed to createTokenAuth");
 	if (typeof e != "string") throw Error("[@octokit/auth-token] Token passed to createTokenAuth is not a string");
-	return e = e.replace(/^(token|bearer) +/i, ""), Object.assign(We.bind(null, e), { hook: Ke.bind(null, e) });
-}, U = "7.0.6", W = () => {}, Je = console.warn.bind(console), Ye = console.error.bind(console);
+	return e = e.replace(/^(token|bearer) +/i, ""), Object.assign(He.bind(null, e), { hook: We.bind(null, e) });
+}, Ke = "7.0.6", qe = () => {}, Je = console.warn.bind(console), Ye = console.error.bind(console);
 function Xe(e = {}) {
-	return typeof e.debug != "function" && (e.debug = W), typeof e.info != "function" && (e.info = W), typeof e.warn != "function" && (e.warn = Je), typeof e.error != "function" && (e.error = Ye), e;
+	return typeof e.debug != "function" && (e.debug = qe), typeof e.info != "function" && (e.info = qe), typeof e.warn != "function" && (e.warn = Je), typeof e.error != "function" && (e.error = Ye), e;
 }
-var Ze = `octokit-core.js/${U} ${p()}`, Qe = class {
-	static VERSION = U;
+var Ze = `octokit-core.js/${Ke} ${p()}`, Qe = class {
+	static VERSION = Ke;
 	static defaults(e) {
 		return class extends this {
 			constructor(...t) {
@@ -531,8 +531,8 @@ var Ze = `octokit-core.js/${U} ${p()}`, Qe = class {
 		};
 	}
 	constructor(e = {}) {
-		let t = new ae.Collection(), n = {
-			baseUrl: L.endpoint.DEFAULTS.baseUrl,
+		let t = new re.Collection(), n = {
+			baseUrl: z.endpoint.DEFAULTS.baseUrl,
 			headers: {},
 			request: Object.assign({}, e.request, { hook: t.bind(null, "request") }),
 			mediaType: {
@@ -540,7 +540,7 @@ var Ze = `octokit-core.js/${U} ${p()}`, Qe = class {
 				format: ""
 			}
 		};
-		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${Ze}` : Ze, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = L.defaults(n), this.graphql = He(this.request).defaults(n), this.log = Xe(e.log), this.hook = t, e.authStrategy) {
+		if (n.headers["user-agent"] = e.userAgent ? `${e.userAgent} ${Ze}` : Ze, e.baseUrl && (n.baseUrl = e.baseUrl), e.previews && (n.mediaType.previews = e.previews), e.timeZone && (n.headers["time-zone"] = e.timeZone), this.request = z.defaults(n), this.graphql = Be(this.request).defaults(n), this.log = Xe(e.log), this.hook = t, e.authStrategy) {
 			let { authStrategy: n, ...r } = e, i = n(Object.assign({
 				request: this.request,
 				log: this.log,
@@ -550,7 +550,7 @@ var Ze = `octokit-core.js/${U} ${p()}`, Qe = class {
 			t.wrap("request", i.hook), this.auth = i;
 		} else if (!e.auth) this.auth = async () => ({ type: "unauthenticated" });
 		else {
-			let n = qe(e.auth);
+			let n = Ge(e.auth);
 			t.wrap("request", n.hook), this.auth = n;
 		}
 		let r = this.constructor;
@@ -2043,52 +2043,56 @@ var mt = {
 		timestamp: (/* @__PURE__ */ new Date()).toISOString()
 	}),
 	terminal: async (e, t) => {
-		let n = e.data.command || "", r = q(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a;
-		i === "default" ? a = process.platform === "win32" ? void 0 : process.env.SHELL || "/bin/zsh" : i === "bash" ? a = "bash" : i === "zsh" ? a = "zsh" : i === "powershell" ? a = "powershell" : i === "cmd" ? a = "cmd.exe" : i === "custom" && e.data.customShell && (a = q(e.data.customShell, t));
-		let o = q(n, t);
-		if (!o.trim()) return t.log(e.id, "No commands to execute", "warn"), {
+		let n = e.data.command || "", r = q(e.data.cwd || "", t) || process.cwd(), i = e.data.shellType || "default", a = e.data.showLogs === !0, o;
+		i === "default" ? o = process.platform === "win32" ? void 0 : process.env.SHELL || "/bin/zsh" : i === "bash" ? o = "bash" : i === "zsh" ? o = "zsh" : i === "powershell" ? o = "powershell" : i === "cmd" ? o = "cmd.exe" : i === "custom" && e.data.customShell && (o = q(e.data.customShell, t));
+		let s = q(n, t);
+		if (!s.trim()) return t.log(e.id, "No commands to execute", "warn"), {
 			stdout: "",
 			stderr: "",
 			exitCode: 0
 		};
-		let s = o;
-		process.platform !== "win32" && (s = "\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nelif [ -s \"$HOME/.nvm/nvm.sh\" ]; then\n  . \"$HOME/.nvm/nvm.sh\"\nelif [ -s \"/usr/local/opt/nvm/nvm.sh\" ]; then\n  . \"/usr/local/opt/nvm/nvm.sh\"\nelif [ -s \"/opt/homebrew/opt/nvm/nvm.sh\" ]; then\n  . \"/opt/homebrew/opt/nvm/nvm.sh\"\nfi\n\n" + o);
-		let c = null, l = !1, d = t.onCancel(() => {
-			l = !0, c && (t.log(e.id, "Killing terminal command process", "warn"), c.kill());
-		}), f = "", p = "", m = "", h = "", g = a ? ` (shell: ${a})` : "";
-		t.log(e.id, `Executing terminal commands${g} in ${r}`, "info");
+		let c = s;
+		process.platform !== "win32" && (c = "\nif [ -s \"$NVM_DIR/nvm.sh\" ]; then\n  . \"$NVM_DIR/nvm.sh\"\nelif [ -s \"$HOME/.nvm/nvm.sh\" ]; then\n  . \"$HOME/.nvm/nvm.sh\"\nelif [ -s \"/usr/local/opt/nvm/nvm.sh\" ]; then\n  . \"/usr/local/opt/nvm/nvm.sh\"\nelif [ -s \"/opt/homebrew/opt/nvm/nvm.sh\" ]; then\n  . \"/opt/homebrew/opt/nvm/nvm.sh\"\nfi\n\n" + s);
+		let l = null, d = !1, f = t.onCancel(() => {
+			d = !0, l && (t.log(e.id, "Killing terminal command process", "warn"), l.kill());
+		}), p = "", m = "", h = "", g = "", _ = o ? ` (shell: ${o})` : "";
+		t.log(e.id, `Executing terminal commands${_} in ${r}`, "info");
 		try {
-			if (l) throw Error("Terminal execution cancelled by user");
+			if (d) throw Error("Terminal execution cancelled by user");
 			let n = await new Promise((n, i) => {
-				let o = u(s, {
+				let s = u(c, {
 					cwd: r,
-					shell: a
-				}, (r, a, o) => {
-					if (c = null, m.trim() && t.log(e.id, m.trimEnd(), "info"), h.trim() && t.log(e.id, h.trimEnd(), "warn"), r) if (l) i(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
+					shell: o
+				}, (r, o, s) => {
+					if (l = null, a && (h.trim() && t.log(e.id, h.trimEnd(), "info"), g.trim() && t.log(e.id, g.trimEnd(), "warn")), r) if (d) i(/* @__PURE__ */ Error("Terminal execution cancelled by user"));
 					else {
 						t.log(e.id, `Command failed: ${r.message}`, "error");
 						let n = Error(r.message);
-						n.stdout = f, n.stderr = p, n.exitCode = r.code || 1, i(n);
+						n.stdout = p, n.stderr = m, n.exitCode = r.code || 1, i(n);
 					}
 					else n({
-						stdout: f,
-						stderr: p,
+						stdout: p,
+						stderr: m,
 						exitCode: 0
 					});
 				});
-				o.stdout?.on("data", (n) => {
+				s.stdout?.on("data", (n) => {
 					let r = n.toString();
-					f += r, m += r;
-					let i = m.split("\n");
-					for (let n = 0; n < i.length - 1; n++) t.log(e.id, i[n].trimEnd(), "info");
-					m = i[i.length - 1];
-				}), o.stderr?.on("data", (n) => {
+					if (p.length < 10 * 1024 * 1024 ? p += r : p.endsWith("\n[Output truncated due to size limit]") || (p += "\n[Output truncated due to size limit]"), a) {
+						h += r;
+						let n = h.split("\n");
+						for (let r = 0; r < n.length - 1; r++) t.log(e.id, n[r].trimEnd(), "info");
+						h = n[n.length - 1];
+					}
+				}), s.stderr?.on("data", (n) => {
 					let r = n.toString();
-					p += r, h += r;
-					let i = h.split("\n");
-					for (let n = 0; n < i.length - 1; n++) t.log(e.id, i[n].trimEnd(), "warn");
-					h = i[i.length - 1];
-				}), c = o;
+					if (m.length < 10 * 1024 * 1024 ? m += r : m.endsWith("\n[Output truncated due to size limit]") || (m += "\n[Output truncated due to size limit]"), a) {
+						g += r;
+						let n = g.split("\n");
+						for (let r = 0; r < n.length - 1; r++) t.log(e.id, n[r].trimEnd(), "warn");
+						g = n[n.length - 1];
+					}
+				}), l = s;
 			});
 			return t.log(e.id, "All commands completed successfully", "success"), {
 				stdout: n.stdout.trim(),
@@ -2096,7 +2100,7 @@ var mt = {
 				exitCode: 0
 			};
 		} finally {
-			d();
+			f();
 		}
 	},
 	git: async (e, t) => {

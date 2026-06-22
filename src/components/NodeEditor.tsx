@@ -130,6 +130,19 @@ export const NodeEditor: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            <div className="flex items-center gap-2 py-1">
+              <input
+                type="checkbox"
+                id="showLogs"
+                checked={node.data.showLogs === true}
+                onChange={(e) => handleDataChange('showLogs', e.target.checked)}
+                className="w-3.5 h-3.5 bg-background border border-border rounded text-primary focus:outline-none focus:ring-0 cursor-pointer"
+              />
+              <label htmlFor="showLogs" className="text-xs text-zinc-300 cursor-pointer select-none">
+                Enable execution logs (stdout/stderr)
+              </label>
+            </div>
           </>
         )}
 
