@@ -1,5 +1,7 @@
 import { nodeExecutors, resolveVariables, ExecutionContext } from './nodeRegistry'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
+import path from 'path'
+import fs from 'fs/promises'
 
 interface Edge {
   source: string
@@ -175,6 +177,8 @@ export class WorkflowExecutor {
         return { success: false, error: 'No entry point' }
       }
 
+      const WORKFLOWS_DIR = path.join(app.getPath('userData'), 'workflows')
+
       const nodeOutputs: Record<string, any> = {}
       const executionContext: ExecutionContext = {
         nodeOutputs,
@@ -183,6 +187,33 @@ export class WorkflowExecutor {
         onCancel: (callback) => {
           this.cancelCallbacks.add(callback)
           return () => this.cancelCallbacks.delete(callback)
+        },
+        runSubWorkflow: async (workflowName: string) => {
+          const filePath = path.join(WORKFLOWS_DIR, `${workflowName}.json`)
+          try {
+            const content = await fs.readFile(filePath, 'utf-8')
+            const subWorkflow = JSON.parse(content)
+            
+            // Create a sub-executor
+            const subExecutor = new WorkflowExecutor(this.window)
+            
+            // Connect cancellation of child to parent
+            const cancelHandler = () => subExecutor.cancel()
+            this.cancelCallbacks.add(cancelHandler)
+
+            try {
+              // Execute child workflow recursively
+              const result = await subExecutor.execute(subWorkflow, credentials)
+              if (!result.success) {
+                throw new Error(result.error || 'Unknown error occurred in sub-workflow')
+              }
+              return result.outputs
+            } finally {
+              this.cancelCallbacks.delete(cancelHandler)
+            }
+          } catch (err: any) {
+            throw new Error(`Failed running sub-workflow "${workflowName}": ${err.message}`)
+          }
         }
       }
 

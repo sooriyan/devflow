@@ -6,6 +6,7 @@ export interface ExecutionContext {
   credentials: Record<string, any>
   log: (nodeId: string, message: string, type?: 'info' | 'error' | 'success' | 'warn') => void
   onCancel: (callback: () => void) => () => void
+  runSubWorkflow?: (workflowName: string) => Promise<any>
 }
 
 // Simple variable resolver: replaces {{ nodeName.field }} or {{ globals.field }}
@@ -610,5 +611,22 @@ fi
       context.log(node.id, `Code execution failed: ${err.message}`, 'error')
       throw err
     }
+  },
+
+  // 8. Sub-Workflow Node
+  subworkflow: async (node, context) => {
+    const subWorkflowName = node.data.subWorkflowName
+    if (!subWorkflowName) {
+      throw new Error('No sub-workflow selected')
+    }
+
+    if (typeof context.runSubWorkflow !== 'function') {
+      throw new Error('Engine execution context does not support running sub-workflows')
+    }
+
+    context.log(node.id, `Triggering sub-workflow: "${subWorkflowName}"`, 'info')
+    const subOutputs = await context.runSubWorkflow(subWorkflowName)
+    context.log(node.id, `Sub-workflow "${subWorkflowName}" execution finished`, 'success')
+    return subOutputs
   }
 }

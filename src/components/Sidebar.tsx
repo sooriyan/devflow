@@ -7,7 +7,8 @@ import {
   ClipboardList,
   Cpu,
   Code2,
-  Search
+  Search,
+  Layers
 } from 'lucide-react'
 
 interface NodeItem {
@@ -74,6 +75,13 @@ export const Sidebar: React.FC = () => {
       description: 'Invoke Model Context Protocol tools',
       icon: <Cpu className="w-4 h-4" />,
       colorClass: 'bg-accent-purple text-white'
+    },
+    {
+      type: 'subworkflow',
+      label: 'Sub-Workflow',
+      description: 'Run another workflow inside this flow',
+      icon: <Layers className="w-4 h-4" />,
+      colorClass: 'bg-indigo-600 text-white'
     }
   ]
 

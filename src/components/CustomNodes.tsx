@@ -11,7 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Pause
+  Pause,
+  Layers
 } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
@@ -204,6 +205,17 @@ export const JavascriptNode: React.FC<NodeProps> = ({ id, data }) => {
   )
 }
 
+// 8. Sub-Workflow Node
+export const SubworkflowNode: React.FC<NodeProps> = ({ id, data }) => {
+  return (
+    <NodeWrapper nodeId={id} icon={<Layers className="w-4 h-4" />} colorClass="bg-indigo-600" title={data.label || 'Sub-Workflow'} subtitle={id}>
+      <span className="font-mono text-zinc-400 block break-all">{data.subWorkflowName || 'None selected'}</span>
+      <Handle type="target" position={Position.Left} id="in" />
+      <Handle type="source" position={Position.Right} id="out" />
+    </NodeWrapper>
+  )
+}
+
 // Export custom types object for React Flow registry
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -212,5 +224,6 @@ export const nodeTypes = {
   github: GithubNode,
   jira: JiraNode,
   mcp: McpNode,
-  javascript: JavascriptNode
+  javascript: JavascriptNode,
+  subworkflow: SubworkflowNode
 }

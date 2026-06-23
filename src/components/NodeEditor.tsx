@@ -8,6 +8,7 @@ export const NodeEditor: React.FC = () => {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData)
   const removeNode = useWorkflowStore((state) => state.removeNode)
   const selectNode = useWorkflowStore((state) => state.selectNode)
+  const workflowsList = useWorkflowStore((state) => state.workflowsList)
 
   if (!node) {
     return (
@@ -491,6 +492,28 @@ export const NodeEditor: React.FC = () => {
             />
             <p className="text-[10px] text-zinc-500">
               Access other node results using <code>inputs["Node_ID"].field</code>. Return an object to pass to downstream nodes.
+            </p>
+          </div>
+        )}
+
+        {/* 7. Sub-Workflow Node */}
+        {node.type === 'subworkflow' && (
+          <div className="space-y-1">
+            <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Select Workflow</label>
+            <select
+              value={node.data.subWorkflowName || ''}
+              onChange={(e) => handleDataChange('subWorkflowName', e.target.value)}
+              className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
+            >
+              <option value="">-- Select a Workflow --</option>
+              {workflowsList.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-zinc-500">
+              Select one of your saved workflows to execute when this node is reached.
             </p>
           </div>
         )}

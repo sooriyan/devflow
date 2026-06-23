@@ -146,6 +146,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     } else if (type === 'javascript') {
       label = 'Code Block'
       defaultData = { code: 'const data = inputs["Terminal_Node_ID"]?.stdout;\nconsole.log(data);\nreturn { data };' }
+    } else if (type === 'subworkflow') {
+      label = 'Sub-Workflow'
+      defaultData = { subWorkflowName: '' }
     }
 
     const newNode: WorkflowNode = {
