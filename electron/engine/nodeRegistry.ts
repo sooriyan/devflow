@@ -1,4 +1,4 @@
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { Octokit } from '@octokit/rest'
 
 export interface ExecutionContext {
@@ -122,33 +122,12 @@ fi
       }
 
       const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
-        const proc = exec(commandToRun, { cwd, shell }, (error, stdout, stderr) => {
-          activeProcess = null
-          
-          // Log any remaining buffered text
-          if (showLogs) {
-            if (stdoutBuffer.trim()) {
-              context.log(node.id, stdoutBuffer.trimEnd(), 'info')
-            }
-            if (stderrBuffer.trim()) {
-              context.log(node.id, stderrBuffer.trimEnd(), 'warn')
-            }
-          }
+        const proc = spawn(commandToRun, [], { cwd, shell: shell || true })
+        activeProcess = proc
 
-          if (error) {
-            if (wasCancelled) {
-              reject(new Error('Terminal execution cancelled by user'))
-            } else {
-              context.log(node.id, `Command failed: ${error.message}`, 'error')
-              const errObj = new Error(error.message) as any
-              errObj.stdout = accumulatedStdout
-              errObj.stderr = accumulatedStderr
-              errObj.exitCode = error.code || 1
-              reject(errObj)
-            }
-          } else {
-            resolve({ stdout: accumulatedStdout, stderr: accumulatedStderr, exitCode: 0 })
-          }
+        proc.on('error', (error) => {
+          activeProcess = null
+          reject(error)
         })
 
         proc.stdout?.on('data', (data) => {
@@ -191,7 +170,33 @@ fi
           }
         })
 
-        activeProcess = proc
+        proc.on('close', (code) => {
+          activeProcess = null
+          
+          // Log any remaining buffered text
+          if (showLogs) {
+            if (stdoutBuffer.trim()) {
+              context.log(node.id, stdoutBuffer.trimEnd(), 'info')
+            }
+            if (stderrBuffer.trim()) {
+              context.log(node.id, stderrBuffer.trimEnd(), 'warn')
+            }
+          }
+
+          if (code !== 0 && !wasCancelled) {
+            const errMsg = `Command exited with code ${code}`
+            context.log(node.id, errMsg, 'error')
+            const errObj = new Error(errMsg) as any
+            errObj.stdout = accumulatedStdout
+            errObj.stderr = accumulatedStderr
+            errObj.exitCode = code || 1
+            reject(errObj)
+          } else if (wasCancelled) {
+            reject(new Error('Terminal execution cancelled by user'))
+          } else {
+            resolve({ stdout: accumulatedStdout, stderr: accumulatedStderr, exitCode: 0 })
+          }
+        })
       })
 
       context.log(node.id, `All commands completed successfully`, 'success')

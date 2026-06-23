@@ -26,6 +26,8 @@ export class WorkflowExecutor {
   private activeNodeId: string | null = null
   private window: BrowserWindow
   private cancelCallbacks = new Set<() => void>()
+  private logQueue: any[] = []
+  private logTimeout: any = null
 
   constructor(window: BrowserWindow) {
     this.window = window
@@ -54,12 +56,7 @@ export class WorkflowExecutor {
     if (this.activeNodeId) {
       this.log(this.activeNodeId, 'Pause requested. Execution will pause before the next node.', 'info')
     } else {
-      this.window.webContents.send('workflow-log', {
-        nodeId: 'system',
-        message: 'Pause requested.',
-        type: 'info',
-        timestamp: new Date().toISOString()
-      })
+      this.log('system', 'Pause requested.', 'info')
     }
   }
 
@@ -96,12 +93,29 @@ export class WorkflowExecutor {
   }
 
   private log(nodeId: string, message: string, type: 'info' | 'error' | 'success' | 'warn' = 'info') {
-    this.window.webContents.send('workflow-log', {
+    this.logQueue.push({
       nodeId,
       message,
       type,
       timestamp: new Date().toISOString()
     })
+
+    if (!this.logTimeout) {
+      this.logTimeout = setTimeout(() => {
+        this.flushLogs()
+      }, 50)
+    }
+  }
+
+  private flushLogs() {
+    if (this.logTimeout) {
+      clearTimeout(this.logTimeout)
+      this.logTimeout = null
+    }
+    if (this.logQueue.length > 0) {
+      this.window.webContents.send('workflow-log', this.logQueue)
+      this.logQueue = []
+    }
   }
 
   private updateStatus(nodeId: string, status: 'idle' | 'running' | 'success' | 'error' | 'paused', output?: any, error?: string) {
@@ -117,196 +131,171 @@ export class WorkflowExecutor {
     this.isCancelled = false
     this.activeNodeId = null
 
-    const nodes = workflow.nodes
-    const edges = workflow.edges
+    try {
+      const nodes = workflow.nodes
+      const edges = workflow.edges
 
-    // 1. Build adjacency lists and verify DAG
-    const adjList: Record<string, string[]> = {}
-    const inDegree: Record<string, number> = {}
+      // 1. Build adjacency lists and verify DAG
+      const adjList: Record<string, string[]> = {}
+      const inDegree: Record<string, number> = {}
 
-    nodes.forEach(node => {
-      adjList[node.id] = []
-      inDegree[node.id] = 0
-      // Initialize UI statuses to idle
-      this.updateStatus(node.id, 'idle')
-    })
-
-    edges.forEach(edge => {
-      if (adjList[edge.source]) {
-        adjList[edge.source].push(edge.target)
-      }
-      if (inDegree[edge.target] !== undefined) {
-        inDegree[edge.target]++
-      }
-    })
-
-    // Find starting triggers (nodes of type 'trigger' or nodes with in-degree 0)
-    const queue: string[] = []
-    const triggers = nodes.filter(n => n.type === 'trigger')
-    
-    if (triggers.length > 0) {
-      triggers.forEach(t => queue.push(t.id))
-    } else {
-      // Fallback: Add all nodes with in-degree 0
       nodes.forEach(node => {
-        if (inDegree[node.id] === 0) {
-          queue.push(node.id)
+        adjList[node.id] = []
+        inDegree[node.id] = 0
+        // Initialize UI statuses to idle
+        this.updateStatus(node.id, 'idle')
+      })
+
+      edges.forEach(edge => {
+        if (adjList[edge.source]) {
+          adjList[edge.source].push(edge.target)
+        }
+        if (inDegree[edge.target] !== undefined) {
+          inDegree[edge.target]++
         }
       })
-    }
 
-    if (queue.length === 0 && nodes.length > 0) {
-      this.window.webContents.send('workflow-log', {
-        nodeId: 'system',
-        message: 'No entry point (trigger or 0-indegree node) found in workflow.',
-        type: 'error',
-        timestamp: new Date().toISOString()
-      })
-      return { success: false, error: 'No entry point' }
-    }
-
-    const nodeOutputs: Record<string, any> = {}
-    const executionContext: ExecutionContext = {
-      nodeOutputs,
-      credentials,
-      log: (nodeId, message, type) => this.log(nodeId, message, type),
-      onCancel: (callback) => {
-        this.cancelCallbacks.add(callback)
-        return () => this.cancelCallbacks.delete(callback)
-      }
-    }
-
-    // Nodes currently waiting on dependencies
-    const processedNodes = new Set<string>()
-
-    this.window.webContents.send('workflow-log', {
-      nodeId: 'system',
-      message: 'Starting workflow execution...',
-      type: 'info',
-      timestamp: new Date().toISOString()
-    })
-
-    while (queue.length > 0) {
-      if (this.isCancelled) {
-        this.window.webContents.send('workflow-log', {
-          nodeId: 'system',
-          message: 'Workflow execution aborted.',
-          type: 'error',
-          timestamp: new Date().toISOString()
-        })
-        return { success: false, cancelled: true }
-      }
-
-      // Dequeue a node
-      const currentId = queue.shift()!
-      const currentNode = nodes.find(n => n.id === currentId)
-
-      if (!currentNode) continue
-
-      if (currentNode.data?.isDisabled === true) {
-        this.log(currentId, `Node is paused (disabled). Skipping execution.`, 'info')
-        this.updateStatus(currentId, 'success', { skipped: true })
-        nodeOutputs[currentId] = { skipped: true }
-        
-        const cleanName = (currentNode.data.label || '').replace(/[^a-zA-Z0-9]/g, '')
-        if (cleanName) {
-          nodeOutputs[cleanName] = { skipped: true }
-        }
-
-        processedNodes.add(currentId)
-
-        const neighbors = adjList[currentId]
-        neighbors.forEach(neighborId => {
-          inDegree[neighborId]--
-          if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
-            queue.push(neighborId)
+      // Find starting triggers (nodes of type 'trigger' or nodes with in-degree 0)
+      const queue: string[] = []
+      const triggers = nodes.filter(n => n.type === 'trigger')
+      
+      if (triggers.length > 0) {
+        triggers.forEach(t => queue.push(t.id))
+      } else {
+        // Fallback: Add all nodes with in-degree 0
+        nodes.forEach(node => {
+          if (inDegree[node.id] === 0) {
+            queue.push(node.id)
           }
         })
-        continue
       }
 
-      await this.checkPause(currentId, currentNode.data?.isPaused === true)
-
-      if (this.isCancelled) {
-        this.window.webContents.send('workflow-log', {
-          nodeId: 'system',
-          message: 'Workflow execution aborted.',
-          type: 'error',
-          timestamp: new Date().toISOString()
-        })
-        return { success: false, cancelled: true }
+      if (queue.length === 0 && nodes.length > 0) {
+        this.log('system', 'No entry point (trigger or 0-indegree node) found in workflow.', 'error')
+        return { success: false, error: 'No entry point' }
       }
 
-      if (this.proceedNext) {
-        this.proceedNext = false
-        this.log(currentId, `Skipped executing node and proceeding to next`, 'info')
-        this.updateStatus(currentId, 'success', {})
-        nodeOutputs[currentId] = {}
-        processedNodes.add(currentId)
-
-        const neighbors = adjList[currentId]
-        neighbors.forEach(neighborId => {
-          inDegree[neighborId]--
-          if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
-            queue.push(neighborId)
-          }
-        })
-        continue
+      const nodeOutputs: Record<string, any> = {}
+      const executionContext: ExecutionContext = {
+        nodeOutputs,
+        credentials,
+        log: (nodeId, message, type) => this.log(nodeId, message, type),
+        onCancel: (callback) => {
+          this.cancelCallbacks.add(callback)
+          return () => this.cancelCallbacks.delete(callback)
+        }
       }
 
-      this.activeNodeId = currentId
-      this.updateStatus(currentId, 'running')
-      this.log(currentId, `Executing node: ${currentNode.data.label || currentNode.type}`, 'info')
+      // Nodes currently waiting on dependencies
+      const processedNodes = new Set<string>()
 
-      try {
-        const executor = nodeExecutors[currentNode.type]
-        if (!executor) {
-          throw new Error(`Executor for node type "${currentNode.type}" not found.`)
+      this.log('system', 'Starting workflow execution...', 'info')
+
+      while (queue.length > 0) {
+        if (this.isCancelled) {
+          this.log('system', 'Workflow execution aborted.', 'error')
+          return { success: false, cancelled: true }
         }
 
-        // Run the node's task
-        const output = await executor(currentNode, executionContext)
-        
-        nodeOutputs[currentNode.id] = output
-        // Also map outputs by label/name for cleaner expression resolution in the UI, e.g. {{ Terminal.stdout }}
-        const cleanName = (currentNode.data.label || '').replace(/[^a-zA-Z0-9]/g, '')
-        if (cleanName) {
-          nodeOutputs[cleanName] = output
+        // Dequeue a node
+        const currentId = queue.shift()!
+        const currentNode = nodes.find(n => n.id === currentId)
+
+        if (!currentNode) continue
+
+        if (currentNode.data?.isDisabled === true) {
+          this.log(currentId, `Node is paused (disabled). Skipping execution.`, 'info')
+          this.updateStatus(currentId, 'success', { skipped: true })
+          nodeOutputs[currentId] = { skipped: true }
+          
+          const cleanName = (currentNode.data.label || '').replace(/[^a-zA-Z0-9]/g, '')
+          if (cleanName) {
+            nodeOutputs[cleanName] = { skipped: true }
+          }
+
+          processedNodes.add(currentId)
+
+          const neighbors = adjList[currentId]
+          neighbors.forEach(neighborId => {
+            inDegree[neighborId]--
+            if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
+              queue.push(neighborId)
+            }
+          })
+          continue
         }
 
-        this.updateStatus(currentId, 'success', output)
-        processedNodes.add(currentId)
+        await this.checkPause(currentId, currentNode.data?.isPaused === true)
 
-        // Queue downstream neighbors whose dependencies are fully resolved
-        const neighbors = adjList[currentId]
-        neighbors.forEach(neighborId => {
-          inDegree[neighborId]--
-          if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
-            queue.push(neighborId)
+        if (this.isCancelled) {
+          this.log('system', 'Workflow execution aborted.', 'error')
+          return { success: false, cancelled: true }
+        }
+
+        if (this.proceedNext) {
+          this.proceedNext = false
+          this.log(currentId, `Skipped executing node and proceeding to next`, 'info')
+          this.updateStatus(currentId, 'success', {})
+          nodeOutputs[currentId] = {}
+          processedNodes.add(currentId)
+
+          const neighbors = adjList[currentId]
+          neighbors.forEach(neighborId => {
+            inDegree[neighborId]--
+            if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
+              queue.push(neighborId)
+            }
+          })
+          continue
+        }
+
+        this.activeNodeId = currentId
+        this.updateStatus(currentId, 'running')
+        this.log(currentId, `Executing node: ${currentNode.data.label || currentNode.type}`, 'info')
+
+        try {
+          const executor = nodeExecutors[currentNode.type]
+          if (!executor) {
+            throw new Error(`Executor for node type "${currentNode.type}" not found.`)
           }
-        })
-      } catch (err: any) {
-        this.updateStatus(currentId, 'error', null, err.message)
-        this.log(currentId, `Failed executing node: ${err.message}`, 'error')
-        
-        this.window.webContents.send('workflow-log', {
-          nodeId: 'system',
-          message: `Workflow halted due to error in node "${currentNode.data.label || currentNode.type}"`,
-          type: 'error',
-          timestamp: new Date().toISOString()
-        })
-        return { success: false, error: err.message }
+
+          // Run the node's task
+          const output = await executor(currentNode, executionContext)
+          
+          nodeOutputs[currentNode.id] = output
+          // Also map outputs by label/name for cleaner expression resolution in the UI, e.g. {{ Terminal.stdout }}
+          const cleanName = (currentNode.data.label || '').replace(/[^a-zA-Z0-9]/g, '')
+          if (cleanName) {
+            nodeOutputs[cleanName] = output
+          }
+
+          this.updateStatus(currentId, 'success', output)
+          processedNodes.add(currentId)
+
+          // Queue downstream neighbors whose dependencies are fully resolved
+          const neighbors = adjList[currentId]
+          neighbors.forEach(neighborId => {
+            inDegree[neighborId]--
+            if (inDegree[neighborId] === 0 && !processedNodes.has(neighborId)) {
+              queue.push(neighborId)
+            }
+          })
+        } catch (err: any) {
+          this.updateStatus(currentId, 'error', null, err.message)
+          this.log(currentId, `Failed executing node: ${err.message}`, 'error')
+          
+          this.log('system', `Workflow halted due to error in node "${currentNode.data.label || currentNode.type}"`, 'error')
+          return { success: false, error: err.message }
+        }
       }
+
+      this.activeNodeId = null
+      this.log('system', 'Workflow execution completed successfully.', 'success')
+
+      return { success: true, outputs: nodeOutputs }
+    } finally {
+      this.flushLogs()
+      this.activeNodeId = null
     }
-
-    this.activeNodeId = null
-    this.window.webContents.send('workflow-log', {
-      nodeId: 'system',
-      message: 'Workflow execution completed successfully.',
-      type: 'success',
-      timestamp: new Date().toISOString()
-    })
-
-    return { success: true, outputs: nodeOutputs }
   }
 }

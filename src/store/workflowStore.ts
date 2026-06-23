@@ -225,7 +225,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   addLog: (log) => set((state) => {
-    const nextLogs = [...state.logs, log]
+    const logsToAdd = Array.isArray(log) ? log : [log]
+    const nextLogs = [...state.logs, ...logsToAdd]
     if (nextLogs.length > 1000) {
       return { logs: nextLogs.slice(nextLogs.length - 1000) }
     }
