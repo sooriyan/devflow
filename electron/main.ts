@@ -142,6 +142,18 @@ ipcMain.handle('select-directory', async () => {
   }
 })
 
+ipcMain.handle('select-file', async () => {
+  const win = BrowserWindow.getFocusedWindow() || mainWindow || undefined
+  const result = await dialog.showOpenDialog(win!, {
+    properties: ['openFile']
+  })
+  if (result.canceled) {
+    return null
+  } else {
+    return result.filePaths[0]
+  }
+})
+
 ipcMain.handle('read-dependencies', async (_, dirPath: string) => {
   if (!dirPath) {
     throw new Error('Directory path is required')

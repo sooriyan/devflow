@@ -108,6 +108,7 @@ declare global {
       saveCredentials: (credentials: any) => Promise<{ success: boolean; encrypted: boolean }>
       getCredentials: () => Promise<any>
       selectDirectory: () => Promise<string | null>
+      selectFile: () => Promise<string | null>
       readDependencies: (dirPath: string) => Promise<{ dependencies: Record<string, string>; devDependencies: Record<string, string> }>
       
       // AI & Pro exposed channels

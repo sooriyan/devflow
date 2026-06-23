@@ -704,13 +704,32 @@ export const NodeEditor: React.FC = () => {
 
             <div className="space-y-1">
               <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Local File Path</label>
-              <input
-                type="text"
-                value={node.data.localPath || ''}
-                onChange={(e) => handleDataChange('localPath', e.target.value)}
-                placeholder="e.g. C:\workspace\build.zip"
-                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={node.data.localPath || ''}
+                  onChange={(e) => handleDataChange('localPath', e.target.value)}
+                  placeholder="e.g. C:\workspace\build.zip"
+                  className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const path = await window.electronAPI.selectFile()
+                      if (path) {
+                        handleDataChange('localPath', path)
+                      }
+                    } catch (err) {
+                      console.error('Failed to select file:', err)
+                    }
+                  }}
+                  className="px-2.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-border rounded-lg text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  title="Browse File"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <p className="text-[10px] text-zinc-500">Supports variable bindings like <code>{`{{ Terminal.stdout }}`}</code></p>
             </div>
 
