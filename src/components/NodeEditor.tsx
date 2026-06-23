@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Trash2, Info, FolderOpen } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
@@ -9,6 +9,36 @@ export const NodeEditor: React.FC = () => {
   const removeNode = useWorkflowStore((state) => state.removeNode)
   const selectNode = useWorkflowStore((state) => state.selectNode)
   const workflowsList = useWorkflowStore((state) => state.workflowsList)
+
+  const [scannedDeps, setScannedDeps] = useState<string[]>([])
+  const [scanError, setScanError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    if (node && node.type === 'dependency' && node.data.cwd) {
+      window.electronAPI.readDependencies(node.data.cwd)
+        .then((res) => {
+          if (!isMounted) return
+          const allDeps = [
+            ...Object.keys(res.dependencies || {}),
+            ...Object.keys(res.devDependencies || {})
+          ].sort()
+          setScannedDeps(allDeps)
+          setScanError(null)
+        })
+        .catch((err) => {
+          if (!isMounted) return
+          setScannedDeps([])
+          setScanError(err.message)
+        })
+    } else {
+      setScannedDeps([])
+      setScanError(null)
+    }
+    return () => {
+      isMounted = false
+    }
+  }, [node?.type, node?.data?.cwd])
 
   if (!node) {
     return (
@@ -516,6 +546,80 @@ export const NodeEditor: React.FC = () => {
               Select one of your saved workflows to execute when this node is reached.
             </p>
           </div>
+        )}
+
+        {/* 8. Manage Dependency Node */}
+        {node.type === 'dependency' && (
+          <>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Working Directory (CWD)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={node.data.cwd || ''}
+                  onChange={(e) => handleDataChange('cwd', e.target.value)}
+                  placeholder="Path to folder containing package.json"
+                  className="flex-1 min-w-0 bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const path = await window.electronAPI.selectDirectory()
+                    if (path) {
+                      handleDataChange('cwd', path)
+                    }
+                  }}
+                  className="px-2.5 bg-zinc-800 hover:bg-zinc-700 border border-border hover:border-zinc-500 rounded-lg text-xs text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  title="Browse folder"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Select Dependency</label>
+              {scanError ? (
+                <div className="text-[10px] text-accent-red bg-accent-red/10 border border-accent-red/20 rounded-lg p-2 font-mono">
+                  {scanError}
+                </div>
+              ) : (
+                <select
+                  value={node.data.dependencyName || ''}
+                  onChange={(e) => handleDataChange('dependencyName', e.target.value)}
+                  disabled={scannedDeps.length === 0}
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {scannedDeps.length === 0 ? (
+                    <option value="">-- No Dependencies Scanned --</option>
+                  ) : (
+                    <>
+                      <option value="">-- Select a Dependency --</option>
+                      {scannedDeps.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Target Version or Branch</label>
+              <input
+                type="text"
+                value={node.data.targetVersion || ''}
+                onChange={(e) => handleDataChange('targetVersion', e.target.value)}
+                placeholder="e.g. main, feature-v2, ^2.1.0"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+              <p className="text-[10px] text-zinc-500">
+                Specify the target branch name (for git dependencies) or version number/prefix (for semver packages).
+              </p>
+            </div>
+          </>
         )}
       </div>
 

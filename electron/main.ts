@@ -112,6 +112,23 @@ ipcMain.handle('select-directory', async () => {
   }
 })
 
+ipcMain.handle('read-dependencies', async (_, dirPath: string) => {
+  if (!dirPath) {
+    throw new Error('Directory path is required')
+  }
+  const pJsonPath = path.join(dirPath, 'package.json')
+  try {
+    const content = await fs.readFile(pJsonPath, 'utf-8')
+    const pkg = JSON.parse(content)
+    return {
+      dependencies: pkg.dependencies || {},
+      devDependencies: pkg.devDependencies || {}
+    }
+  } catch (err: any) {
+    throw new Error(`Failed to read package.json: ${err.message}`)
+  }
+})
+
 // 1. Workflow file management
 ipcMain.handle('save-workflow', async (_, name: string, data: any) => {
   const filePath = path.join(WORKFLOWS_DIR, `${name}.json`)

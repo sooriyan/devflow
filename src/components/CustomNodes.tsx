@@ -12,7 +12,8 @@ import {
   XCircle,
   Loader2,
   Pause,
-  Layers
+  Layers,
+  Package
 } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
@@ -216,6 +217,21 @@ export const SubworkflowNode: React.FC<NodeProps> = ({ id, data }) => {
   )
 }
 
+// 9. Dependency Management Node
+export const DependencyNode: React.FC<NodeProps> = ({ id, data }) => {
+  const displayTarget = data.targetVersion ? `➜ ${data.targetVersion}` : 'Not set'
+  return (
+    <NodeWrapper nodeId={id} icon={<Package className="w-4 h-4" />} colorClass="bg-pink-600" title={data.label || 'Manage Dependency'} subtitle={id}>
+      <div className="flex flex-col gap-0.5">
+        <span className="font-mono font-bold text-zinc-300 block truncate">{data.dependencyName || 'None selected'}</span>
+        <span className="font-mono text-[10px] text-zinc-500 block truncate">{displayTarget}</span>
+      </div>
+      <Handle type="target" position={Position.Left} id="in" />
+      <Handle type="source" position={Position.Right} id="out" />
+    </NodeWrapper>
+  )
+}
+
 // Export custom types object for React Flow registry
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -225,5 +241,6 @@ export const nodeTypes = {
   jira: JiraNode,
   mcp: McpNode,
   javascript: JavascriptNode,
-  subworkflow: SubworkflowNode
+  subworkflow: SubworkflowNode,
+  dependency: DependencyNode
 }

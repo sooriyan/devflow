@@ -35,4 +35,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveCredentials: (credentials: any) => ipcRenderer.invoke('save-credentials', credentials),
   getCredentials: () => ipcRenderer.invoke('get-credentials'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  readDependencies: (dirPath: string) => ipcRenderer.invoke('read-dependencies', dirPath),
 })

@@ -1,5 +1,7 @@
 import { exec, spawn } from 'child_process'
 import { Octokit } from '@octokit/rest'
+import fs from 'fs'
+import path from 'path'
 
 export interface ExecutionContext {
   nodeOutputs: Record<string, any>
@@ -628,5 +630,86 @@ fi
     const subOutputs = await context.runSubWorkflow(subWorkflowName)
     context.log(node.id, `Sub-workflow "${subWorkflowName}" execution finished`, 'success')
     return subOutputs
+  },
+
+  // 9. Manage Dependency Node
+  dependency: async (node, context) => {
+    const cwd = resolveVariables(node.data.cwd || '', context) || process.cwd()
+    const depName = node.data.dependencyName
+    const target = resolveVariables(node.data.targetVersion || '', context)
+
+    if (!depName) {
+      throw new Error('No dependency selected')
+    }
+    if (!target) {
+      throw new Error('No target branch or version specified')
+    }
+
+    context.log(node.id, `Checking dependency "${depName}" in "${cwd}"`, 'info')
+
+    const pJsonPath = path.join(cwd, 'package.json')
+    if (!fs.existsSync(pJsonPath)) {
+      throw new Error(`package.json not found in directory: ${cwd}`)
+    }
+
+    const content = await fs.promises.readFile(pJsonPath, 'utf-8')
+    const pkg = JSON.parse(content)
+
+    let depType: 'dependencies' | 'devDependencies' | null = null
+    if (pkg.dependencies && pkg.dependencies[depName]) {
+      depType = 'dependencies'
+    } else if (pkg.devDependencies && pkg.devDependencies[depName]) {
+      depType = 'devDependencies'
+    }
+
+    if (!depType) {
+      throw new Error(`Dependency "${depName}" not found in package.json dependencies or devDependencies`)
+    }
+
+    const currentValue = pkg[depType][depName]
+    let newValue = target
+
+    // Handle git URLs with branch hash vs standard version strings
+    if (currentValue.includes('#')) {
+      const idx = currentValue.indexOf('#')
+      newValue = currentValue.substring(0, idx) + '#' + target
+    } else if (
+      currentValue.startsWith('git+') ||
+      currentValue.startsWith('git://') ||
+      currentValue.includes('.git') ||
+      currentValue.includes('github:')
+    ) {
+      newValue = currentValue + '#' + target
+    }
+
+    pkg[depType][depName] = newValue
+    context.log(node.id, `Updating "${depName}" in ${depType} from "${currentValue}" to "${newValue}"`, 'info')
+
+    // Write back package.json
+    await fs.promises.writeFile(pJsonPath, JSON.stringify(pkg, null, 2), 'utf-8')
+    context.log(node.id, `Successfully saved package.json`, 'success')
+
+    // Delete package-lock.json if it exists
+    const lockPath = path.join(cwd, 'package-lock.json')
+    if (fs.existsSync(lockPath)) {
+      context.log(node.id, `Removing package-lock.json...`, 'info')
+      await fs.promises.unlink(lockPath)
+    }
+
+    // Delete node_modules if it exists
+    const nmPath = path.join(cwd, 'node_modules')
+    if (fs.existsSync(nmPath)) {
+      context.log(node.id, `Removing node_modules directory...`, 'info')
+      await fs.promises.rm(nmPath, { recursive: true, force: true })
+    }
+
+    context.log(node.id, `Removed package lock and node_modules successfully. Ready for clean installation.`, 'success')
+
+    return {
+      dependency: depName,
+      previousValue: currentValue,
+      newValue: newValue,
+      success: true
+    }
   }
 }

@@ -8,7 +8,8 @@ import {
   Cpu,
   Code2,
   Search,
-  Layers
+  Layers,
+  Package
 } from 'lucide-react'
 
 interface NodeItem {
@@ -82,6 +83,13 @@ export const Sidebar: React.FC = () => {
       description: 'Run another workflow inside this flow',
       icon: <Layers className="w-4 h-4" />,
       colorClass: 'bg-indigo-600 text-white'
+    },
+    {
+      type: 'dependency',
+      label: 'Manage Dependency',
+      description: 'Switch package/branch in package.json & clean node_modules',
+      icon: <Package className="w-4 h-4" />,
+      colorClass: 'bg-pink-600 text-white'
     }
   ]
 
