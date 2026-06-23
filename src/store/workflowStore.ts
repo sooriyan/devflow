@@ -134,7 +134,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (type === 'trigger') {
       label = 'Manual Trigger'
     } else if (type === 'terminal') {
-      defaultData = { command: 'echo "Hello World!"', cwd: '', showLogs: false }
+      defaultData = { command: 'echo "Hello World!"', cwd: '', envVars: 'NODE_OPTIONS=--max-old-space-size=4096', showLogs: false }
     } else if (type === 'git') {
       defaultData = { operation: 'branch', branchName: '', commitMessage: '', commitHash: '', remote: 'origin', cwd: '' }
     } else if (type === 'github') {

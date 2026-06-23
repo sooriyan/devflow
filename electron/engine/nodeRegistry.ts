@@ -97,6 +97,30 @@ fi
       commandToRun = nvmSource + '\n' + resolvedCommand
     }
 
+    // Parse custom environment variables
+    const parsedEnv: Record<string, string> = {}
+    if (node.data.envVars) {
+      const lines = node.data.envVars.split('\n')
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) continue
+        const idx = trimmed.indexOf('=')
+        if (idx !== -1) {
+          const key = trimmed.substring(0, idx).trim()
+          const val = trimmed.substring(idx + 1).trim()
+          if (key) {
+            parsedEnv[key] = resolveVariables(val, context)
+          }
+        }
+      }
+    }
+
+    // Merge parent process env with custom env. Override/set NODE_OPTIONS to ensure Node has enough memory.
+    const finalEnv = { ...process.env, ...parsedEnv }
+    if (!finalEnv.NODE_OPTIONS) {
+      finalEnv.NODE_OPTIONS = '--max-old-space-size=4096'
+    }
+
     let activeProcess: any = null
     let wasCancelled = false
 
@@ -112,6 +136,9 @@ fi
     let accumulatedStderr = ''
     let stdoutBuffer = ''
     let stderrBuffer = ''
+    let loggedLinesCount = 0
+    const MAX_LOG_LINES = 2000
+    let didLogTruncationWarning = false
 
     const shellDisplay = shell ? ` (shell: ${shell})` : ''
     context.log(node.id, `Executing terminal commands${shellDisplay} in ${cwd}`, 'info')
@@ -122,7 +149,7 @@ fi
       }
 
       const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve, reject) => {
-        const proc = spawn(commandToRun, [], { cwd, shell: shell || true })
+        const proc = spawn(commandToRun, [], { cwd, shell: shell || true, env: finalEnv })
         activeProcess = proc
 
         proc.on('error', (error) => {
@@ -144,7 +171,14 @@ fi
             stdoutBuffer += str
             const lines = stdoutBuffer.split('\n')
             for (let i = 0; i < lines.length - 1; i++) {
-              context.log(node.id, lines[i].trimEnd(), 'info')
+              if (loggedLinesCount < MAX_LOG_LINES) {
+                context.log(node.id, lines[i].trimEnd(), 'info')
+                loggedLinesCount++
+              } else if (!didLogTruncationWarning) {
+                context.log(node.id, `[Logs truncated. Only the first ${MAX_LOG_LINES} lines are displayed in the UI to prevent memory issues. The full output is still available in the node's stdout results.]`, 'warn')
+                didLogTruncationWarning = true
+                break
+              }
             }
             stdoutBuffer = lines[lines.length - 1]
           }
@@ -164,7 +198,14 @@ fi
             stderrBuffer += str
             const lines = stderrBuffer.split('\n')
             for (let i = 0; i < lines.length - 1; i++) {
-              context.log(node.id, lines[i].trimEnd(), 'warn')
+              if (loggedLinesCount < MAX_LOG_LINES) {
+                context.log(node.id, lines[i].trimEnd(), 'warn')
+                loggedLinesCount++
+              } else if (!didLogTruncationWarning) {
+                context.log(node.id, `[Logs truncated. Only the first ${MAX_LOG_LINES} lines are displayed in the UI to prevent memory issues. The full output is still available in the node's stdout results.]`, 'warn')
+                didLogTruncationWarning = true
+                break
+              }
             }
             stderrBuffer = lines[lines.length - 1]
           }
@@ -175,11 +216,13 @@ fi
           
           // Log any remaining buffered text
           if (showLogs) {
-            if (stdoutBuffer.trim()) {
+            if (stdoutBuffer.trim() && loggedLinesCount < MAX_LOG_LINES) {
               context.log(node.id, stdoutBuffer.trimEnd(), 'info')
+              loggedLinesCount++
             }
-            if (stderrBuffer.trim()) {
+            if (stderrBuffer.trim() && loggedLinesCount < MAX_LOG_LINES) {
               context.log(node.id, stderrBuffer.trimEnd(), 'warn')
+              loggedLinesCount++
             }
           }
 

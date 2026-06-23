@@ -131,6 +131,18 @@ export const NodeEditor: React.FC = () => {
               </div>
             </div>
 
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Environment Variables</label>
+              <textarea
+                value={node.data.envVars || ''}
+                onChange={(e) => handleDataChange('envVars', e.target.value)}
+                rows={3}
+                placeholder="KEY=VALUE (one per line)&#10;e.g. NODE_OPTIONS=--max-old-space-size=4096"
+                className="w-full bg-background border border-border rounded-lg p-2.5 text-xs text-foreground focus:outline-none focus:border-primary font-mono transition-colors"
+              />
+              <p className="text-[10px] text-zinc-500">Configure environments for spawned execution. Supports variables like <code>{`{{ NodeName.stdout }}`}</code>.</p>
+            </div>
+
             <div className="flex items-center gap-2 py-1">
               <input
                 type="checkbox"
