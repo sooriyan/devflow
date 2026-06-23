@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, safeStorage, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, safeStorage, dialog, nativeImage } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { existsSync, mkdirSync } from 'fs'
@@ -83,6 +83,20 @@ function loadShellEnv() {
 
 app.whenReady().then(() => {
   loadShellEnv()
+
+  // Set macOS dock icon dynamically during development
+  if (app.dock) {
+    try {
+      const iconPath = process.env.VITE_DEV_SERVER_URL
+        ? path.join(__dirname, '../public/icon.png')
+        : path.join(__dirname, '../dist/icon.png')
+      const image = nativeImage.createFromPath(iconPath)
+      app.dock.setIcon(image)
+    } catch (err) {
+      console.error('Failed to set macOS dock icon:', err)
+    }
+  }
+
   createWindow()
 
   app.on('activate', () => {
