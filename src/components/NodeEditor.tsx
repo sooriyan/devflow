@@ -629,6 +629,103 @@ export const NodeEditor: React.FC = () => {
             </div>
           </>
         )}
+
+        {/* 10. SFTP Upload Node */}
+        {node.type === 'sftp' && (
+          <>
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Host</label>
+              <input
+                type="text"
+                value={node.data.host || ''}
+                onChange={(e) => handleDataChange('host', e.target.value)}
+                placeholder="e.g. sftp.example.com"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Port</label>
+              <input
+                type="text"
+                value={node.data.port || '22'}
+                onChange={(e) => handleDataChange('port', e.target.value)}
+                placeholder="22"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Username</label>
+              <input
+                type="text"
+                value={node.data.username || ''}
+                onChange={(e) => handleDataChange('username', e.target.value)}
+                placeholder="e.g. sftp_user"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Authentication Method</label>
+              <select
+                value={node.data.authMethod || 'password'}
+                onChange={(e) => handleDataChange('authMethod', e.target.value)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="password">Password</option>
+                <option value="privateKey">Private Key (file path or raw value)</option>
+              </select>
+            </div>
+
+            {node.data.authMethod === 'password' ? (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
+                <input
+                  type="password"
+                  value={node.data.password || ''}
+                  onChange={(e) => handleDataChange('password', e.target.value)}
+                  placeholder="Password"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Private Key</label>
+                <textarea
+                  value={node.data.privateKey || ''}
+                  onChange={(e) => handleDataChange('privateKey', e.target.value)}
+                  rows={4}
+                  placeholder="Paste PEM private key content, or enter absolute file path"
+                  className="w-full bg-background border border-border rounded-lg p-2 text-xs text-foreground focus:outline-none focus:border-primary font-mono transition-colors"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Local File Path</label>
+              <input
+                type="text"
+                value={node.data.localPath || ''}
+                onChange={(e) => handleDataChange('localPath', e.target.value)}
+                placeholder="e.g. C:\workspace\build.zip"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+              <p className="text-[10px] text-zinc-500">Supports variable bindings like <code>{`{{ Terminal.stdout }}`}</code></p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Remote Destination Path</label>
+              <input
+                type="text"
+                value={node.data.remotePath || ''}
+                onChange={(e) => handleDataChange('remotePath', e.target.value)}
+                placeholder="e.g. /var/www/html/build.zip"
+                className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors font-mono"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Delete button */}

@@ -9,7 +9,8 @@ import {
   Code2,
   Search,
   Layers,
-  Package
+  Package,
+  UploadCloud
 } from 'lucide-react'
 
 interface NodeItem {
@@ -90,6 +91,13 @@ export const Sidebar: React.FC = () => {
       description: 'Switch package/branch in package.json & clean node_modules',
       icon: <Package className="w-4 h-4" />,
       colorClass: 'bg-pink-600 text-white'
+    },
+    {
+      type: 'sftp',
+      label: 'SFTP Upload',
+      description: 'Upload files to a remote server over SFTP',
+      icon: <UploadCloud className="w-4 h-4" />,
+      colorClass: 'bg-teal-600 text-white'
     }
   ]
 

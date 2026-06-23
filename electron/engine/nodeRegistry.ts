@@ -2,6 +2,7 @@ import { exec, spawn } from 'child_process'
 import { Octokit } from '@octokit/rest'
 import fs from 'fs'
 import path from 'path'
+import { Client as SSHClient, ConnectConfig } from 'ssh2'
 
 export interface ExecutionContext {
   nodeOutputs: Record<string, any>
@@ -710,6 +711,149 @@ fi
       previousValue: currentValue,
       newValue: newValue,
       success: true
+    }
+  },
+
+  // 10. SFTP Upload Node
+  sftp: async (node, context) => {
+    const rawHost = node.data.host || ''
+    const rawPort = node.data.port || '22'
+    const rawUsername = node.data.username || ''
+    const authMethod = node.data.authMethod || 'password'
+    const rawPassword = node.data.password || ''
+    const rawPrivateKey = node.data.privateKey || ''
+    const rawLocalPath = node.data.localPath || ''
+    const rawRemotePath = node.data.remotePath || ''
+
+    const host = resolveVariables(rawHost, context)
+    const port = parseInt(resolveVariables(rawPort, context) || '22', 10)
+    const username = resolveVariables(rawUsername, context)
+    const password = resolveVariables(rawPassword, context)
+    const privateKey = resolveVariables(rawPrivateKey, context)
+    const localPath = resolveVariables(rawLocalPath, context)
+    const remotePath = resolveVariables(rawRemotePath, context)
+
+    if (!host) throw new Error('SFTP Host is required')
+    if (!username) throw new Error('SFTP Username is required')
+    if (!localPath) throw new Error('Local file path is required')
+    if (!remotePath) throw new Error('Remote destination path is required')
+
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`Local file not found: "${localPath}"`)
+    }
+
+    context.log(node.id, `Connecting to SFTP server ${host}:${port} as ${username}...`, 'info')
+
+    const client = new SSHClient()
+    let isConnected = false
+    let wasCancelled = false
+
+    const unsubscribe = context.onCancel(() => {
+      wasCancelled = true
+      context.log(node.id, 'SFTP transfer cancelled by user', 'warn')
+      try {
+        client.end()
+      } catch {
+        // Safe ignore
+      }
+    })
+
+    try {
+      if (wasCancelled) {
+        throw new Error('SFTP execution cancelled by user')
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        client.on('ready', () => {
+          isConnected = true
+          context.log(node.id, 'SSH Connection established. Initializing SFTP subsystem...', 'info')
+          
+          client.sftp((err, sftp) => {
+            if (err) {
+              return reject(new Error(`SFTP subsystem error: ${err.message}`))
+            }
+
+            context.log(node.id, `Uploading "${localPath}" to remote "${remotePath}"...`, 'info')
+
+            sftp.fastPut(localPath, remotePath, (transferErr) => {
+              if (transferErr) {
+                return reject(new Error(`SFTP upload failed: ${transferErr.message}`))
+              }
+              resolve()
+            })
+          })
+        })
+
+        client.on('error', (err) => {
+          if (!isConnected) {
+            reject(new Error(`SSH connection error: ${err.message}`))
+          } else {
+            context.log(node.id, `SSH connection warning: ${err.message}`, 'warn')
+          }
+        })
+
+        client.on('end', () => {
+          context.log(node.id, 'SSH Connection closed', 'info')
+        })
+
+        // Connect config
+        const connectConfig: ConnectConfig = {
+          host,
+          port,
+          username,
+        }
+
+        if (authMethod === 'password') {
+          connectConfig.password = password
+        } else if (authMethod === 'privateKey') {
+          // If privateKey contains file path vs raw key content
+          if (
+            privateKey.includes('-----BEGIN') || 
+            privateKey.includes('ssh-rsa') ||
+            privateKey.includes('ssh-ed25519')
+          ) {
+            connectConfig.privateKey = privateKey
+          } else {
+            // Treat as a file path
+            try {
+              if (fs.existsSync(privateKey)) {
+                connectConfig.privateKey = fs.readFileSync(privateKey, 'utf8')
+              } else {
+                return reject(new Error(`Private key file not found at: "${privateKey}"`))
+              }
+            } catch (readErr: unknown) {
+              return reject(new Error(`Failed to read private key file: ${(readErr as Error).message}`))
+            }
+          }
+        } else {
+          return reject(new Error(`Unsupported auth method: "${authMethod}"`))
+        }
+
+        try {
+          client.connect(connectConfig)
+        } catch (connErr: unknown) {
+          reject(connErr)
+        }
+      })
+
+      context.log(node.id, `SFTP Upload completed successfully!`, 'success')
+      return {
+        success: true,
+        host,
+        localPath,
+        remotePath,
+        timestamp: new Date().toISOString()
+      }
+    } catch (err: unknown) {
+      context.log(node.id, `SFTP upload failed: ${(err as Error).message}`, 'error')
+      throw err
+    } finally {
+      unsubscribe()
+      try {
+        client.end()
+      } catch {
+        // Safe ignore
+      }
     }
   }
 }

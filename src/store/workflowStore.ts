@@ -190,6 +190,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     } else if (type === 'dependency') {
       label = 'Manage Dependency'
       defaultData = { cwd: '', dependencyName: '', targetVersion: '' }
+    } else if (type === 'sftp') {
+      label = 'SFTP Upload'
+      defaultData = {
+        host: '',
+        port: '22',
+        username: '',
+        authMethod: 'password',
+        password: '',
+        privateKey: '',
+        localPath: '',
+        remotePath: ''
+      }
     }
 
     const newNode: WorkflowNode = {

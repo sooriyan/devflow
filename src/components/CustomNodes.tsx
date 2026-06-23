@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react'
 import { Handle, Position } from '@xyflow/react'
 import {
@@ -13,7 +14,8 @@ import {
   Loader2,
   Pause,
   Layers,
-  Package
+  Package,
+  UploadCloud
 } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
@@ -232,6 +234,25 @@ export const DependencyNode: React.FC<NodeProps> = ({ id, data }) => {
   )
 }
 
+// 10. SFTP Upload Node
+export const SftpNode: React.FC<NodeProps> = ({ id, data }) => {
+  const displayTarget = data.host && data.remotePath ? `${data.host}:${data.remotePath}` : 'Not configured'
+  return (
+    <NodeWrapper nodeId={id} icon={<UploadCloud className="w-4 h-4" />} colorClass="bg-teal-600" title={data.label || 'SFTP Upload'} subtitle={id}>
+      <div className="flex flex-col gap-0.5">
+        <span className="font-mono text-zinc-300 block truncate" title={data.localPath || 'Local file'}>
+          Local: {data.localPath ? data.localPath.split(/[/\\]/).pop() : 'None'}
+        </span>
+        <span className="font-mono text-[10px] text-zinc-500 block truncate" title={displayTarget}>
+          Remote: {displayTarget}
+        </span>
+      </div>
+      <Handle type="target" position={Position.Left} id="in" />
+      <Handle type="source" position={Position.Right} id="out" />
+    </NodeWrapper>
+  )
+}
+
 // Export custom types object for React Flow registry
 export const nodeTypes = {
   trigger: TriggerNode,
@@ -242,5 +263,6 @@ export const nodeTypes = {
   mcp: McpNode,
   javascript: JavascriptNode,
   subworkflow: SubworkflowNode,
-  dependency: DependencyNode
+  dependency: DependencyNode,
+  sftp: SftpNode
 }

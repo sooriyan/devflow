@@ -47,6 +47,8 @@ Available Node Types & Allowed Data Schemas:
    Properties: { subWorkflowName: string }
 9. "dependency": Manages dependencies in package.json.
    Properties: { cwd?: string, dependencyName: string, targetVersion: string }
+10. "sftp": Uploads files to a remote server using SFTP.
+    Properties: { host: string, port?: string, username: string, authMethod: 'password'|'privateKey', password?: string, privateKey?: string, localPath: string, remotePath: string }
 
 Connection Rules:
 - The first node MUST be a "trigger" node.
@@ -94,7 +96,7 @@ const GEMINI_RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           id: { type: 'STRING' },
-          type: { type: 'STRING', enum: ["trigger", "terminal", "git", "github", "jira", "mcp", "javascript", "subworkflow", "dependency"] },
+          type: { type: 'STRING', enum: ["trigger", "terminal", "git", "github", "jira", "mcp", "javascript", "subworkflow", "dependency", "sftp"] },
           position: {
             type: 'OBJECT',
             properties: {
@@ -134,7 +136,15 @@ const GEMINI_RESPONSE_SCHEMA = {
               code: { type: 'STRING' },
               subWorkflowName: { type: 'STRING' },
               dependencyName: { type: 'STRING' },
-              targetVersion: { type: 'STRING' }
+              targetVersion: { type: 'STRING' },
+              host: { type: 'STRING' },
+              port: { type: 'STRING' },
+              username: { type: 'STRING' },
+              authMethod: { type: 'STRING', enum: ["password", "privateKey"] },
+              password: { type: 'STRING' },
+              privateKey: { type: 'STRING' },
+              localPath: { type: 'STRING' },
+              remotePath: { type: 'STRING' }
             },
             required: ['label']
           }
