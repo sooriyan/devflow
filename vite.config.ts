@@ -11,6 +11,13 @@ export default defineConfig({
       {
         // Main process entry
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['ssh2']
+            }
+          }
+        }
       },
       {
         // Preload script entry
