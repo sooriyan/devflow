@@ -32,8 +32,16 @@ export const NodeEditor: React.FC = () => {
           setScanError(err.message)
         })
     } else {
-      setScannedDeps([])
-      setScanError(null)
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setScannedDeps([])
+          setScanError(null)
+        }
+      }, 0)
+      return () => {
+        isMounted = false
+        clearTimeout(timer)
+      }
     }
     return () => {
       isMounted = false
@@ -55,7 +63,7 @@ export const NodeEditor: React.FC = () => {
     updateNodeData(node.id, { label: e.target.value })
   }
 
-  const handleDataChange = (key: string, value: any) => {
+  const handleDataChange = (key: string, value: unknown) => {
     updateNodeData(node.id, { [key]: value })
   }
 

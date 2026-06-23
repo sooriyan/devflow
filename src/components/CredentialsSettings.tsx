@@ -11,23 +11,37 @@ export const CredentialsSettings: React.FC<CredentialsSettingsProps> = ({ isOpen
   const [jiraHost, setJiraHost] = useState('')
   const [jiraEmail, setJiraEmail] = useState('')
   const [jiraToken, setJiraToken] = useState('')
+  
+  // AI Keys
+  const [geminiApiKey, setGeminiApiKey] = useState('')
+  const [openaiApiKey, setOpenaiApiKey] = useState('')
+  const [anthropicApiKey, setAnthropicApiKey] = useState('')
+  const [deepseekApiKey, setDeepseekApiKey] = useState('')
 
   const [showGithub, setShowGithub] = useState(false)
   const [showJira, setShowJira] = useState(false)
+  const [showGemini, setShowGemini] = useState(false)
+  const [showOpenai, setShowOpenai] = useState(false)
+  const [showAnthropic, setShowAnthropic] = useState(false)
+  const [showDeepseek, setShowDeepseek] = useState(false)
+
   const [statusMsg, setStatusMsg] = useState('')
 
   useEffect(() => {
     if (isOpen) {
-      // Load current credentials from secure storage
       window.electronAPI.getCredentials().then((creds) => {
         if (creds) {
           setGithubToken(creds.githubToken || '')
           setJiraHost(creds.jiraHost || '')
           setJiraEmail(creds.jiraEmail || '')
           setJiraToken(creds.jiraToken || '')
+          setGeminiApiKey(creds.geminiApiKey || '')
+          setOpenaiApiKey(creds.openaiApiKey || '')
+          setAnthropicApiKey(creds.anthropicApiKey || '')
+          setDeepseekApiKey(creds.deepseekApiKey || '')
         }
+        setStatusMsg('')
       })
-      setStatusMsg('')
     }
   }, [isOpen])
 
@@ -35,11 +49,17 @@ export const CredentialsSettings: React.FC<CredentialsSettingsProps> = ({ isOpen
     e.preventDefault()
     setStatusMsg('Saving...')
     try {
+      const currentCreds = await window.electronAPI.getCredentials()
       const result = await window.electronAPI.saveCredentials({
+        ...currentCreds,
         githubToken: githubToken.trim(),
         jiraHost: jiraHost.trim(),
         jiraEmail: jiraEmail.trim(),
-        jiraToken: jiraToken.trim()
+        jiraToken: jiraToken.trim(),
+        geminiApiKey: geminiApiKey.trim(),
+        openaiApiKey: openaiApiKey.trim(),
+        anthropicApiKey: anthropicApiKey.trim(),
+        deepseekApiKey: deepseekApiKey.trim(),
       })
       if (result.success) {
         setStatusMsg('Credentials saved securely!')
@@ -80,75 +100,173 @@ export const CredentialsSettings: React.FC<CredentialsSettingsProps> = ({ isOpen
             These variables are securely encrypted on your local disk using your operating system's native credentials manager.
           </p>
 
-          {/* GitHub Token */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">GitHub Personal Access Token</label>
-            <div className="relative">
-              <input
-                type={showGithub ? 'text' : 'password'}
-                value={githubToken}
-                onChange={(e) => setGithubToken(e.target.value)}
-                placeholder="ghp_..."
-                className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => setShowGithub(!showGithub)}
-                className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                {showGithub ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+          <div className="max-h-[55vh] overflow-y-auto pr-2 space-y-4 scrollbar-thin">
+            {/* --- Section 1: Developer Integrations --- */}
+            <div>
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-primary mb-3">Integrations</h4>
+              <div className="space-y-4">
+                {/* GitHub Token */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">GitHub Personal Access Token</label>
+                  <div className="relative">
+                    <input
+                      type={showGithub ? 'text' : 'password'}
+                      value={githubToken}
+                      onChange={(e) => setGithubToken(e.target.value)}
+                      placeholder="ghp_..."
+                      className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGithub(!showGithub)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    >
+                      {showGithub ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Jira Settings */}
+                <div className="space-y-3 pt-2">
+                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Jira Cloud Settings</h5>
+                  
+                  {/* Host */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-500">Jira Host Domain</label>
+                    <input
+                      type="text"
+                      value={jiraHost}
+                      onChange={(e) => setJiraHost(e.target.value)}
+                      placeholder="your-domain.atlassian.net"
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-500">Atlassian Email</label>
+                    <input
+                      type="email"
+                      value={jiraEmail}
+                      onChange={(e) => setJiraEmail(e.target.value)}
+                      placeholder="developer@company.com"
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground"
+                    />
+                  </div>
+
+                  {/* API Token */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-zinc-500">Jira API Token</label>
+                    <div className="relative">
+                      <input
+                        type={showJira ? 'text' : 'password'}
+                        value={jiraToken}
+                        onChange={(e) => setJiraToken(e.target.value)}
+                        placeholder="ATATT3xFf..."
+                        className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowJira(!showJira)}
+                        className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                      >
+                        {showJira ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="h-[1px] bg-border my-4" />
+            <div className="h-[1px] bg-border my-4" />
 
-          {/* Jira Configuration */}
-          <div className="space-y-4">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Jira Cloud Settings</h4>
-            
-            {/* Host */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-500">Jira Host Domain</label>
-              <input
-                type="text"
-                value={jiraHost}
-                onChange={(e) => setJiraHost(e.target.value)}
-                placeholder="your-domain.atlassian.net"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground"
-              />
-            </div>
+            {/* --- Section 2: AI Provider Keys --- */}
+            <div>
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-accent-purple mb-3">AI Providers (Pro Features)</h4>
+              <div className="space-y-4">
+                {/* Gemini API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Gemini API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showGemini ? 'text' : 'password'}
+                      value={geminiApiKey}
+                      onChange={(e) => setGeminiApiKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGemini(!showGemini)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    >
+                      {showGemini ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
 
-            {/* Email */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-500">Atlassian Email</label>
-              <input
-                type="email"
-                value={jiraEmail}
-                onChange={(e) => setJiraEmail(e.target.value)}
-                placeholder="developer@company.com"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground"
-              />
-            </div>
+                {/* OpenAI API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">OpenAI API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showOpenai ? 'text' : 'password'}
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      placeholder="sk-proj-..."
+                      className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenai(!showOpenai)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    >
+                      {showOpenai ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
 
-            {/* API Token */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-zinc-500">Jira API Token</label>
-              <div className="relative">
-                <input
-                  type={showJira ? 'text' : 'password'}
-                  value={jiraToken}
-                  onChange={(e) => setJiraToken(e.target.value)}
-                  placeholder="ATATT3xFf..."
-                  className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowJira(!showJira)}
-                  className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors"
-                >
-                  {showJira ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                {/* Anthropic API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Anthropic Claude API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showAnthropic ? 'text' : 'password'}
+                      value={anthropicApiKey}
+                      onChange={(e) => setAnthropicApiKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAnthropic(!showAnthropic)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    >
+                      {showAnthropic ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* DeepSeek API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">DeepSeek API Key</label>
+                  <div className="relative">
+                    <input
+                      type={showDeepseek ? 'text' : 'password'}
+                      value={deepseekApiKey}
+                      onChange={(e) => setDeepseekApiKey(e.target.value)}
+                      placeholder="ds-..."
+                      className="w-full bg-background border border-border rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-primary transition-colors text-foreground font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDeepseek(!showDeepseek)}
+                      className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    >
+                      {showDeepseek ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

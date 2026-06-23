@@ -5,6 +5,13 @@ import { existsSync, mkdirSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 import { WorkflowExecutor } from './engine/executor'
+import { generateWorkflow } from './engine/ai'
+import {
+  initScheduler,
+  loadAllSchedules,
+  registerWorkflowSchedule,
+  unregisterWorkflowSchedule
+} from './engine/scheduler'
 
 // Set application name
 app.name = 'DevFlow'
@@ -99,6 +106,15 @@ app.whenReady().then(() => {
 
   createWindow()
 
+  // Initialize scheduler and load active cron tasks
+  initScheduler(
+    WORKFLOWS_DIR,
+    () => mainWindow,
+    getCredentialsInternal,
+    checkBypassStatus
+  )
+  loadAllSchedules()
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -147,6 +163,19 @@ ipcMain.handle('read-dependencies', async (_, dirPath: string) => {
 ipcMain.handle('save-workflow', async (_, name: string, data: any) => {
   const filePath = path.join(WORKFLOWS_DIR, `${name}.json`)
   await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+  
+  // Register or unregister cron schedules dynamically
+  const schedule = data.schedule
+  if (schedule && schedule.enabled && schedule.cronExpression) {
+    try {
+      registerWorkflowSchedule(name, schedule.cronExpression, data)
+    } catch (err: any) {
+      console.error(`[DevFlow Cron] Failed to register schedule for "${name}":`, err.message)
+    }
+  } else {
+    unregisterWorkflowSchedule(name)
+  }
+
   return { success: true }
 })
 
@@ -170,6 +199,10 @@ ipcMain.handle('list-workflows', async () => {
 ipcMain.handle('delete-workflow', async (_, name: string) => {
   const filePath = path.join(WORKFLOWS_DIR, `${name}.json`)
   await fs.unlink(filePath)
+  
+  // Clean up cron schedules when workflow is deleted
+  unregisterWorkflowSchedule(name)
+
   return { success: true }
 })
 
@@ -256,4 +289,75 @@ ipcMain.handle('save-credentials', async (_, credentials: any) => {
     await fs.writeFile(CREDENTIALS_FILE, Buffer.from(stringified, 'utf-8'))
     return { success: true, encrypted: false }
   }
+})
+
+// 4. Pro feature gating and AI Generation IPC handlers
+function checkBypassStatus(): boolean {
+  const envBypass = process.env.DEVFLOW_BYPASS === 'true'
+  const bypassFile = path.join(app.getPath('userData'), '.bypass')
+  return envBypass || existsSync(bypassFile)
+}
+
+ipcMain.handle('check-pro-status', async () => {
+  if (checkBypassStatus()) return { isPro: true, bypassed: true }
+  const credentials = await getCredentialsInternal()
+  return { isPro: credentials.isProActivated === true, bypassed: false }
+})
+
+ipcMain.handle('activate-pro', async (_, licenseKey: string) => {
+  const trimmedKey = licenseKey.trim()
+  const validKeys = ['DEVFLOW-BYPASS-ADMIN', 'FREE-PRO-ACCESS', 'DEVFLOW-100-INR-SIM']
+  if (validKeys.includes(trimmedKey)) {
+    const credentials = await getCredentialsInternal()
+    credentials.isProActivated = true
+    credentials.proActivationKey = trimmedKey
+    
+    const stringified = JSON.stringify(credentials)
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(stringified)
+      await fs.writeFile(CREDENTIALS_FILE, encrypted)
+    } else {
+      await fs.writeFile(CREDENTIALS_FILE, Buffer.from(stringified, 'utf-8'))
+    }
+    return { success: true }
+  }
+  return { success: false, error: 'Invalid activation/bypass key' }
+})
+
+ipcMain.handle('mock-subscribe', async () => {
+  const credentials = await getCredentialsInternal()
+  credentials.isProActivated = true
+  credentials.proActivationKey = 'MOCK_SUBSCRIPTION'
+  
+  const stringified = JSON.stringify(credentials)
+  if (safeStorage.isEncryptionAvailable()) {
+    const encrypted = safeStorage.encryptString(stringified)
+    await fs.writeFile(CREDENTIALS_FILE, encrypted)
+  } else {
+    await fs.writeFile(CREDENTIALS_FILE, Buffer.from(stringified, 'utf-8'))
+  }
+  return { success: true }
+})
+
+ipcMain.handle('generate-workflow', async (_, args: { provider: string; model: string; prompt: string }) => {
+  const isBypassed = checkBypassStatus()
+  const credentials = await getCredentialsInternal()
+  const isPro = credentials.isProActivated === true || isBypassed
+
+  if (!isPro) {
+    throw new Error('DevFlow Pro is required to use the AI Assistant.')
+  }
+
+  const { provider, model, prompt } = args
+  let apiKey = ''
+  if (provider === 'gemini') apiKey = credentials.geminiApiKey
+  else if (provider === 'openai') apiKey = credentials.openaiApiKey
+  else if (provider === 'anthropic') apiKey = credentials.anthropicApiKey
+  else if (provider === 'deepseek') apiKey = credentials.deepseekApiKey
+
+  if (!apiKey) {
+    throw new Error(`API key for ${provider} is missing. Please configure it in Settings.`)
+  }
+
+  return await generateWorkflow(provider, model, prompt, apiKey)
 })

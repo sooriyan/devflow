@@ -11,8 +11,15 @@ import '@xyflow/react/dist/style.css'
 import { useWorkflowStore } from '../store/workflowStore'
 import { nodeTypes } from './CustomNodes'
 import { Play, Pause, SkipForward } from 'lucide-react'
+import { AIAssistant } from './AIAssistant'
 
-export const Canvas: React.FC = () => {
+interface CanvasProps {
+  isAiOpen: boolean
+  onCloseAi: () => void
+  onOpenPaywall: () => void
+}
+
+export const Canvas: React.FC<CanvasProps> = ({ isAiOpen, onCloseAi, onOpenPaywall }) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const [contextMenu, setContextMenu] = useState<{
     x: number
@@ -233,6 +240,13 @@ export const Canvas: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Floating AI Assistant panel */}
+      <AIAssistant
+        isOpen={isAiOpen}
+        onClose={onCloseAi}
+        onOpenPaywall={onOpenPaywall}
+      />
     </div>
   )
 }

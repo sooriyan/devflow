@@ -43,6 +43,18 @@ interface WorkflowState {
   workflowsList: string[]
   currentWorkflowName: string
   
+  // Pro Subscription and AI status
+  isPro: boolean
+  isProBypassed: boolean
+  isGeneratingAI: boolean
+  aiError: string | null
+  activeAiProvider: 'gemini' | 'openai' | 'anthropic' | 'deepseek'
+  activeAiModel: string
+
+  // Cron schedule status
+  workflowSchedule: { enabled: boolean; cronExpression: string } | null
+  setWorkflowSchedule: (schedule: { enabled: boolean; cronExpression: string } | null) => void
+
   // React Flow setters
   onNodesChange: OnNodesChange<WorkflowNode>
   onEdgesChange: OnEdgesChange
@@ -68,6 +80,13 @@ interface WorkflowState {
   saveWorkflow: (name: string) => Promise<void>
   loadWorkflow: (name: string) => Promise<void>
   deleteWorkflow: (name: string) => Promise<void>
+
+  // AI & Pro Actions
+  checkProStatus: () => Promise<void>
+  activateProWithKey: (key: string) => Promise<{ success: boolean; error?: string }>
+  completeMockSubscription: () => Promise<void>
+  setAiModel: (provider: 'gemini' | 'openai' | 'anthropic' | 'deepseek', model: string) => void
+  generateWorkflowWithAI: (prompt: string, mode: 'replace' | 'append') => Promise<void>
 }
 
 // Extends Window interface to support electronAPI
@@ -90,6 +109,12 @@ declare global {
       getCredentials: () => Promise<any>
       selectDirectory: () => Promise<string | null>
       readDependencies: (dirPath: string) => Promise<{ dependencies: Record<string, string>; devDependencies: Record<string, string> }>
+      
+      // AI & Pro exposed channels
+      checkProStatus: () => Promise<{ isPro: boolean; bypassed: boolean }>
+      activatePro: (licenseKey: string) => Promise<{ success: boolean; error?: string }>
+      mockSubscribe: () => Promise<{ success: boolean }>
+      generateWorkflow: (args: { provider: string; model: string; prompt: string }) => Promise<unknown>
     }
   }
 }
@@ -103,6 +128,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   logs: [],
   workflowsList: [],
   currentWorkflowName: 'untitled-workflow',
+  
+  // Pro Subscription and AI initial state
+  isPro: false,
+  isProBypassed: false,
+  isGeneratingAI: false,
+  aiError: null,
+  activeAiProvider: 'gemini',
+  activeAiModel: 'gemini-2.0-flash',
+
+  // Cron schedule initial state
+  workflowSchedule: null,
+  setWorkflowSchedule: (schedule) => set({ workflowSchedule: schedule }),
 
   onNodesChange: (changes) => {
     set({
@@ -196,7 +233,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
   selectNode: (id) => set({ selectedNodeId: id }),
 
-  clearCanvas: () => set({ nodes: [], edges: [], selectedNodeId: null, nodeStatuses: {}, logs: [] }),
+  clearCanvas: () => set({ nodes: [], edges: [], selectedNodeId: null, nodeStatuses: {}, logs: [], workflowSchedule: null }),
 
   runWorkflow: async () => {
     if (get().isRunning) return
@@ -265,7 +302,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     const data = {
       nodes: get().nodes,
       edges: get().edges,
-      currentWorkflowName: name
+      currentWorkflowName: name,
+      schedule: get().workflowSchedule
     }
     try {
       await window.electronAPI.saveWorkflow(name, data)
@@ -286,7 +324,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
           currentWorkflowName: data.currentWorkflowName || name,
           selectedNodeId: null,
           nodeStatuses: {},
-          logs: []
+          logs: [],
+          workflowSchedule: data.schedule || null
         })
       }
     } catch (err) {
@@ -304,6 +343,127 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       await get().loadWorkflowsList()
     } catch (err) {
       console.error('Failed deleting workflow:', err)
+    }
+  },
+
+  checkProStatus: async () => {
+    try {
+      const status = await window.electronAPI.checkProStatus()
+      set({ isPro: status.isPro, isProBypassed: status.bypassed })
+    } catch (err) {
+      console.error('Failed to check pro status:', err)
+    }
+  },
+
+  activateProWithKey: async (key) => {
+    try {
+      const result = await window.electronAPI.activatePro(key)
+      if (result.success) {
+        await get().checkProStatus()
+      }
+      return result
+    } catch (err: unknown) {
+      console.error('Failed to activate pro with key:', err)
+      return { success: false, error: (err as Error).message || 'Verification error' }
+    }
+  },
+
+  completeMockSubscription: async () => {
+    try {
+      const result = await window.electronAPI.mockSubscribe()
+      if (result.success) {
+        await get().checkProStatus()
+      }
+    } catch (err) {
+      console.error('Failed mock subscription:', err)
+    }
+  },
+
+  setAiModel: (provider, model) => {
+    set({ activeAiProvider: provider, activeAiModel: model })
+  },
+
+  generateWorkflowWithAI: async (prompt, mode) => {
+    set({ isGeneratingAI: true, aiError: null })
+    try {
+      const args = {
+        provider: get().activeAiProvider,
+        model: get().activeAiModel,
+        prompt
+      }
+      const response = (await window.electronAPI.generateWorkflow(args)) as {
+        nodes: WorkflowNode[]
+        edges: Edge[]
+      }
+      
+      if (response && response.nodes && response.edges) {
+        if (mode === 'replace') {
+          set({
+            nodes: response.nodes,
+            edges: response.edges,
+            selectedNodeId: null,
+            nodeStatuses: {}
+          })
+          get().addLog({
+            nodeId: 'system',
+            message: `AI generated workflow replaced the canvas successfully using model ${get().activeAiModel}.`,
+            type: 'success',
+            timestamp: new Date().toISOString()
+          })
+        } else {
+          // Append mode: offset the generated nodes so they don't cover existing ones.
+          const currentNodes = get().nodes
+          let offsetX = 0
+          if (currentNodes.length > 0) {
+            offsetX = Math.max(...currentNodes.map(n => n.position.x)) + 300
+          }
+          
+          const uniqueId = `ai_${Date.now()}`
+          const mappedNodes = response.nodes.map((n) => ({
+            ...n,
+            id: `${n.id}_${uniqueId}`,
+            position: {
+              x: n.position.x + offsetX,
+              y: n.position.y
+            }
+          }))
+
+          const mappedEdges = response.edges.map((e) => {
+            const newSource = `${e.source}_${uniqueId}`
+            const newTarget = `${e.target}_${uniqueId}`
+            return {
+              ...e,
+              id: `e_${newSource}-${newTarget}`,
+              source: newSource,
+              target: newTarget
+            }
+          })
+
+          set({
+            nodes: [...currentNodes, ...mappedNodes],
+            edges: [...get().edges, ...mappedEdges]
+          })
+          get().addLog({
+            nodeId: 'system',
+            message: `AI generated workflow appended to the canvas successfully using model ${get().activeAiModel}.`,
+            type: 'success',
+            timestamp: new Date().toISOString()
+          })
+        }
+      } else {
+        throw new Error('Invalid format returned from AI generation.')
+      }
+    } catch (err: unknown) {
+      console.error('Failed generating workflow:', err)
+      set({ aiError: (err as Error).message || 'An error occurred during generation.' })
+      get().addLog({
+        nodeId: 'system',
+        message: `AI Workflow generation failed: ${(err as Error).message}`,
+        type: 'error',
+        timestamp: new Date().toISOString()
+      })
+    } finally {
+      set({ isGeneratingAI: false })
     }
   }
 }))

@@ -36,4 +36,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCredentials: () => ipcRenderer.invoke('get-credentials'),
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
   readDependencies: (dirPath: string) => ipcRenderer.invoke('read-dependencies', dirPath),
+
+  // Pro & AI actions
+  checkProStatus: () => ipcRenderer.invoke('check-pro-status'),
+  activatePro: (licenseKey: string) => ipcRenderer.invoke('activate-pro', licenseKey),
+  mockSubscribe: () => ipcRenderer.invoke('mock-subscribe'),
+  generateWorkflow: (args: { provider: string; model: string; prompt: string }) => ipcRenderer.invoke('generate-workflow', args),
 })

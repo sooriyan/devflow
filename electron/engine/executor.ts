@@ -115,18 +115,28 @@ export class WorkflowExecutor {
       this.logTimeout = null
     }
     if (this.logQueue.length > 0) {
-      this.window.webContents.send('workflow-log', this.logQueue)
+      if (this.window && !this.window.isDestroyed()) {
+        this.window.webContents.send('workflow-log', this.logQueue)
+      } else {
+        for (const log of this.logQueue) {
+          console.log(`[DevFlow Cron Log] [${log.nodeId}] [${log.type}] ${log.message}`)
+        }
+      }
       this.logQueue = []
     }
   }
 
   private updateStatus(nodeId: string, status: 'idle' | 'running' | 'success' | 'error' | 'paused', output?: any, error?: string) {
-    this.window.webContents.send('workflow-status', {
-      nodeId,
-      status,
-      output,
-      error
-    })
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.send('workflow-status', {
+        nodeId,
+        status,
+        output,
+        error
+      })
+    } else {
+      console.log(`[DevFlow Cron Status] Node ${nodeId} is now ${status}`)
+    }
   }
 
   async execute(workflow: Workflow, credentials: Record<string, any>) {

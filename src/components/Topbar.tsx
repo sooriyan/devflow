@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react'
-import { Play, Square, Save, FolderOpen, Settings, Plus } from 'lucide-react'
+import { Play, Square, Save, FolderOpen, Settings, Plus, Sparkles, Clock } from 'lucide-react'
 import { useWorkflowStore } from '../store/workflowStore'
 
 interface TopbarProps {
   onOpenSettings: () => void
+  isAiOpen: boolean
+  onToggleAi: () => void
+  onOpenSchedule: () => void
 }
 
-export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
+export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings, isAiOpen, onToggleAi, onOpenSchedule }) => {
+  const isPro = useWorkflowStore((state) => state.isPro)
+  const isProBypassed = useWorkflowStore((state) => state.isProBypassed)
   const {
     currentWorkflowName,
     workflowsList,
@@ -16,19 +21,22 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
     saveWorkflow,
     loadWorkflow,
     loadWorkflowsList,
-    clearCanvas
+    clearCanvas,
+    workflowSchedule
   } = useWorkflowStore()
 
   const [workflowNameInput, setWorkflowNameInput] = useState(currentWorkflowName)
   const [selectedWorkflow, setSelectedWorkflow] = useState('')
+  const [prevWorkflowName, setPrevWorkflowName] = useState(currentWorkflowName)
+
+  if (currentWorkflowName !== prevWorkflowName) {
+    setWorkflowNameInput(currentWorkflowName)
+    setPrevWorkflowName(currentWorkflowName)
+  }
 
   useEffect(() => {
     loadWorkflowsList()
-  }, [])
-
-  useEffect(() => {
-    setWorkflowNameInput(currentWorkflowName)
-  }, [currentWorkflowName])
+  }, [loadWorkflowsList])
 
   const handleSave = () => {
     const name = workflowNameInput.trim() || 'untitled-workflow'
@@ -136,6 +144,38 @@ export const Topbar: React.FC<TopbarProps> = ({ onOpenSettings }) => {
             <span>Run Workflow</span>
           </button>
         )}
+
+        <button
+          onClick={onToggleAi}
+          className={`p-2 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+            isAiOpen
+              ? 'bg-primary/20 border-primary text-primary shadow-glow'
+              : isPro || isProBypassed
+                ? 'border-yellow-500/40 hover:border-yellow-400 text-yellow-500/80 hover:text-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.05)]'
+                : 'border-border text-zinc-400 hover:text-foreground hover:border-zinc-500'
+          }`}
+          title="AI Flow Assistant"
+        >
+          <Sparkles className={`w-4 h-4 ${isPro || isProBypassed ? 'text-yellow-500' : ''} ${isAiOpen ? 'animate-pulse' : ''}`} />
+          {(isPro || isProBypassed) && (
+            <span className="text-[9px] uppercase tracking-wider font-extrabold text-yellow-500 font-mono">Pro</span>
+          )}
+        </button>
+
+        <button
+          onClick={onOpenSchedule}
+          className={`p-2 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+            workflowSchedule?.enabled
+              ? 'bg-primary/20 border-primary text-primary shadow-glow'
+              : 'border-border text-zinc-400 hover:text-foreground hover:border-zinc-500'
+          }`}
+          title="Schedule Workflow (Cron)"
+        >
+          <Clock className={`w-4 h-4 ${workflowSchedule?.enabled ? 'animate-pulse' : ''}`} />
+          {workflowSchedule?.enabled && (
+            <span className="text-[9px] uppercase tracking-wider font-extrabold text-primary font-mono">Active</span>
+          )}
+        </button>
 
         <button
           onClick={onOpenSettings}
